@@ -1,0 +1,84 @@
+using Unity.Burst;
+using Unity.Entities;
+
+namespace Tyrsha.Eciton
+{
+    /// <summary>
+    /// ApplyEffectByIdRequest를 DB(Blob) 정의로 EffectSpec으로 변환해 ApplyEffectRequest로 전달하는 시스템.
+    /// </summary>
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateBefore(typeof(EffectRequestSystem))]
+    public partial struct EffectFromDatabaseSystem : ISystem
+    {
+        [BurstCompile]
+        private partial struct EffectFromDatabaseJob : IJobEntity
+        {
+            public AbilityEffectDatabase Db;
+
+            public void Execute(
+                DynamicBuffer<ApplyEffectByIdRequest> byId,
+                DynamicBuffer<ApplyEffectRequest> apply)
+            {
+                if (!Db.Blob.IsCreated)
+                {
+                    byId.Clear();
+                    return;
+                }
+                
+                ref var effects = ref Db.Blob.Value.Effects;
+                
+                for (int i = 0; i < byId.Length; i++)
+                {
+                    var req = byId[i];
+                    bool found = false;
+                    
+                    for (int j = 0; j < effects.Length; j++)
+                    {
+                        if (effects[j].EffectId == req.EffectId)
+                        {
+                            ref var def = ref effects[j];
+                            found = true;
+                            
+                            apply.Add(new ApplyEffectRequest
+                            {
+                                Spec = new EffectSpec
+                                {
+                                    // 정의 값은 EffectRequestSystem이 Blob DB에서 조회한다.
+                                    EffectId = def.EffectId,
+                                    Level = req.Level,
+                                    Source = req.Source,
+                                    Target = req.Target,
+                                    Duration = 0f,
+                                    IsPermanent = false,
+                                    IsPeriodic = false,
+                                    Period = 0f,
+                                    GrantedTag = GameplayTag.Invalid,
+                                    BlockedByTag = GameplayTag.Invalid,
+                                    RevertModifierOnEnd = false,
+                                    StackingPolicy = EffectStackingPolicy.None,
+                                    MaxStacks = 0,
+                                    Modifier = default,
+                                    Modifiers = default,
+                                }
+                            });
+                            break;
+                        }
+                    }
+                }
+
+                byId.Clear();
+            }
+        }
+
+        public void OnUpdate(ref SystemState state)
+        {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+            state.Dependency = new EffectFromDatabaseJob
+            {
+                Db = db
+            }.Schedule(state.Dependency);
+        }
+    }
+}
+

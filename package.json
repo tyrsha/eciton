@@ -1,0 +1,8 @@
+{
+  "name": "com.tyrsha.eciton",
+  "version": "1.0.0",
+  "displayName": "Eciton",
+  "description": "A boilerplate Unity package for Eciton systems.",
+  "unity": "2021.3",
+  "dependencies": {}
+}

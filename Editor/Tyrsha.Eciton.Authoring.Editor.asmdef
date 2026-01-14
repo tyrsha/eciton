@@ -1,0 +1,19 @@
+{
+  "name": "Tyrsha.Eciton.Authoring.Editor",
+  "references": [
+    "Tyrsha.Eciton.Authoring",
+    "Tyrsha.Eciton"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
+
