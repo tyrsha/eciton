@@ -1,0 +1,22 @@
+{
+  "name": "Tyrsha.Eciton.RuntimeTests",
+  "references": [
+    "Tyrsha.Eciton",
+    "Unity.Entities",
+    "Unity.Mathematics",
+    "Unity.Transforms"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
+

@@ -1,0 +1,226 @@
+using Unity.Entities;
+
+namespace Tyrsha.Eciton
+{
+    /// <summary>
+    /// Effect 적용/제거 요청을 처리하는 최소 스텁 시스템.
+    /// 실제 스택/태그/면역/예외 규칙 등은 이후 확장.
+    /// </summary>
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    public class EffectRequestSystem : SystemBase
+    {
+        private int _nextHandle;
+
+        protected override void OnCreate()
+        {
+            base.OnCreate();
+            _nextHandle = 1;
+        }
+
+        protected override void OnUpdate()
+        {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+
+            int nextHandle = _nextHandle;
+
+            Entities.ForEach((
+                Entity entity,
+                in DynamicBuffer<GameplayTagElement> targetTags,
+                DynamicBuffer<ActiveEffect> activeEffects,
+                DynamicBuffer<ApplyEffectRequest> applyRequests,
+                DynamicBuffer<RemoveEffectRequest> removeRequests,
+                DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests,
+                DynamicBuffer<AddGameplayTagRequest> addTagRequests,
+                DynamicBuffer<RemoveGameplayTagRequest> removeTagRequests,
+                DynamicBuffer<RemoveEffectsWithTagRequest> removeEffectsByTag,
+                DynamicBuffer<PendingGameplayEvent> events) =>
+            {
+                // Apply
+                for (int i = 0; i < applyRequests.Length; i++)
+                {
+                    var spec = applyRequests[i].Spec;
+                    if (!AbilityEffectDatabaseLookup.TryGetEffect(db, spec.EffectId, out var def))
+                        continue;
+
+                    // 면역/차단 태그 체크
+                    if (def.BlockedByTag.IsValid && HasTag(targetTags, def.BlockedByTag.Value))
+                        continue;
+
+                    // 비주기(즉시) 효과: 바로 modifier 적용.
+                    if (!def.IsPeriodic)
+                    {
+                        ApplyAll(attributeRequests, def, 1);
+                    }
+
+                    // 태그 부여(즉시/지속 상관없이 적용 시점에 1회 추가).
+                    if (def.GrantedTag.IsValid)
+                        addTagRequests.Add(new AddGameplayTagRequest { Tag = def.GrantedTag });
+
+                    // 이벤트: effect applied (스텁)
+                    events.Add(new PendingGameplayEvent
+                    {
+                        Event = new GameplayEvent
+                        {
+                            Type = GameplayEventType.EffectApplied,
+                            Source = spec.Source,
+                            Target = entity,
+                            Id = spec.EffectId,
+                            Magnitude = 0f
+                        }
+                    });
+
+                    // 지속/주기 효과는 ActiveEffect로 관리한다.
+                    // (Duration<=0 이면서 비주기면 ActiveEffect를 만들지 않는다.)
+                    bool needsActive =
+                        def.IsPeriodic ||
+                        (!def.IsPermanent && def.Duration > 0f);
+
+                    if (needsActive)
+                    {
+                        // 스태킹 처리(EffectId + GrantedTag 기준 스텁)
+                        if (def.StackingPolicy != EffectStackingPolicy.None)
+                        {
+                            for (int e = 0; e < activeEffects.Length; e++)
+                            {
+                                // EffectId + GrantedTag 기준 merge
+                                if (activeEffects[e].EffectId == def.EffectId)
+                                {
+                                    var existing = activeEffects[e];
+                                    existing.StackingPolicy = def.StackingPolicy;
+                                    existing.MaxStacks = def.MaxStacks;
+
+                                    int maxStacks = existing.MaxStacks <= 0 ? 1 : existing.MaxStacks;
+                                    if (existing.StackCount <= 0) existing.StackCount = 1;
+
+                                    if (def.StackingPolicy == EffectStackingPolicy.RefreshDuration)
+                                    {
+                                        if (!def.IsPermanent)
+                                            existing.RemainingTime = def.Duration;
+                                    }
+                                    else if (def.StackingPolicy == EffectStackingPolicy.StackAdditive)
+                                    {
+                                        if (existing.StackCount < maxStacks)
+                                            existing.StackCount++;
+
+                                        // 스텁: 스택이 쌓일 때마다 즉시 modifier를 한 번 더 적용(DoT는 다음 틱부터 자연히 누적됨).
+                                        if (!def.IsPeriodic)
+                                            ApplyAll(attributeRequests, def, 1);
+
+                                        if (!def.IsPermanent)
+                                            existing.RemainingTime = def.Duration;
+                                    }
+
+                                    activeEffects[e] = existing;
+                                    // 이미 합쳐졌으므로 신규 생성 스킵
+                                    goto Applied;
+                                }
+                            }
+                        }
+
+                        var handle = new EffectHandle { Value = nextHandle++ };
+                        activeEffects.Add(new ActiveEffect
+                        {
+                            Handle = handle,
+                            EffectId = def.EffectId,
+                            Level = spec.Level,
+                            Source = spec.Source,
+                            RemainingTime = def.IsPermanent ? 0f : def.Duration,
+                            TimeToNextTick = def.IsPeriodic ? def.Period : 0f,
+                            StackingPolicy = def.StackingPolicy,
+                            MaxStacks = def.MaxStacks,
+                            StackCount = 1,
+                        });
+                    }
+
+                Applied:
+                    ;
+                }
+
+                // Remove
+                for (int i = 0; i < removeRequests.Length; i++)
+                {
+                    var handle = removeRequests[i].Handle;
+                    if (!handle.IsValid) continue;
+
+                    for (int e = activeEffects.Length - 1; e >= 0; e--)
+                    {
+                        if (activeEffects[e].Handle.Value == handle.Value)
+                        {
+                            // 태그 제거 요청(효과 강제 제거 시)
+                            int removedEffectId = activeEffects[e].EffectId;
+                            if (AbilityEffectDatabaseLookup.TryGetEffect(db, removedEffectId, out var removedDef))
+                            {
+                                if (removedDef.GrantedTag.IsValid)
+                                    removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = removedDef.GrantedTag });
+                            }
+                            activeEffects.RemoveAt(e);
+
+                            events.Add(new PendingGameplayEvent
+                            {
+                                Event = new GameplayEvent
+                                {
+                                    Type = GameplayEventType.EffectRemoved,
+                                    Source = Entity.Null,
+                                    Target = entity,
+                                    Id = removedEffectId,
+                                    Magnitude = 0f
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Remove by tag (cleanse)
+                for (int i = 0; i < removeEffectsByTag.Length; i++)
+                {
+                    var tag = removeEffectsByTag[i].Tag;
+                    if (!tag.IsValid) continue;
+
+                    for (int e = activeEffects.Length - 1; e >= 0; e--)
+                    {
+                        int effectId = activeEffects[e].EffectId;
+                        if (!AbilityEffectDatabaseLookup.TryGetEffect(db, effectId, out var cleanseDef))
+                            continue;
+                        if (cleanseDef.GrantedTag.Value == tag.Value)
+                        {
+                            removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = tag });
+                            activeEffects.RemoveAt(e);
+                        }
+                    }
+                }
+
+                applyRequests.Clear();
+                removeRequests.Clear();
+                removeEffectsByTag.Clear();
+            }).Schedule();
+
+            _nextHandle = nextHandle;
+        }
+
+        private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
+        {
+            int count = def.Modifiers.Length;
+            for (int i = 0; i < count; i++)
+            {
+                var mod = def.Modifiers[i];
+                if (mod.Magnitude == 0f)
+                    continue;
+                if (stackCount != 1)
+                    mod.Magnitude *= stackCount;
+                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
+            }
+        }
+
+        private static bool HasTag(DynamicBuffer<GameplayTagElement> tags, int tagValue)
+        {
+            for (int i = 0; i < tags.Length; i++)
+            {
+                if (tags[i].Tag.Value == tagValue)
+                    return true;
+            }
+            return false;
+        }
+    }
+}
+
