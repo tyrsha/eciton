@@ -17,10 +17,18 @@ namespace Tyrsha.Eciton
             Entities.WithoutBurst().ForEach((
                 Entity entity,
                 in AbilitySystemComponent asc,
+                DynamicBuffer<GameplayTagElement> tags,
                 DynamicBuffer<GrantedAbility> granted,
                 DynamicBuffer<TryActivateAbilityRequest> tryActivate) =>
             {
                 _ = asc;
+
+                // 스턴이면 발사 불가(요청은 실패로 소비)
+                if (HasTag(tags, CommonIds.Tag_Stunned))
+                {
+                    tryActivate.Clear();
+                    return;
+                }
 
                 for (int i = tryActivate.Length - 1; i >= 0; i--)
                 {
@@ -56,6 +64,16 @@ namespace Tyrsha.Eciton
                     tryActivate.RemoveAt(i);
                 }
             }).Run();
+        }
+
+        private static bool HasTag(DynamicBuffer<GameplayTagElement> tags, int tagValue)
+        {
+            for (int i = 0; i < tags.Length; i++)
+            {
+                if (tags[i].Tag.Value == tagValue)
+                    return true;
+            }
+            return false;
         }
     }
 }

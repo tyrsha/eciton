@@ -27,7 +27,8 @@ namespace Tyrsha.Eciton
                 DynamicBuffer<RemoveEffectRequest> removeRequests,
                 DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests,
                 DynamicBuffer<AddGameplayTagRequest> addTagRequests,
-                DynamicBuffer<RemoveGameplayTagRequest> removeTagRequests) =>
+                DynamicBuffer<RemoveGameplayTagRequest> removeTagRequests,
+                DynamicBuffer<RemoveEffectsWithTagRequest> removeEffectsByTag) =>
             {
                 // Apply
                 for (int i = 0; i < applyRequests.Length; i++)
@@ -67,6 +68,7 @@ namespace Tyrsha.Eciton
                             // 스텁: 첫 틱은 Period 이후부터.
                             TimeToNextTick = spec.IsPeriodic ? spec.Period : 0f,
                             GrantedTag = spec.GrantedTag,
+                            RevertModifierOnEnd = spec.RevertModifierOnEnd,
                         });
                     }
                 }
@@ -90,8 +92,25 @@ namespace Tyrsha.Eciton
                     }
                 }
 
+                // Remove by tag (cleanse)
+                for (int i = 0; i < removeEffectsByTag.Length; i++)
+                {
+                    var tag = removeEffectsByTag[i].Tag;
+                    if (!tag.IsValid) continue;
+
+                    for (int e = activeEffects.Length - 1; e >= 0; e--)
+                    {
+                        if (activeEffects[e].GrantedTag.Value == tag.Value)
+                        {
+                            removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = tag });
+                            activeEffects.RemoveAt(e);
+                        }
+                    }
+                }
+
                 applyRequests.Clear();
                 removeRequests.Clear();
+                removeEffectsByTag.Clear();
             }).Schedule();
 
             _nextHandle = nextHandle;

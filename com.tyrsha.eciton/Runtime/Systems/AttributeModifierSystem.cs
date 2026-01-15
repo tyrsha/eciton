@@ -30,7 +30,24 @@ namespace Tyrsha.Eciton
             switch (mod.Attribute)
             {
                 case AttributeId.Health:
-                    data.Health = ApplyOp(data.Health, mod.Op, mod.Magnitude);
+                    // 스텁: Health에 들어오는 음수 Add는 "데미지"로 간주하고 Shield가 있으면 먼저 흡수한다.
+                    if (mod.Op == AttributeModOp.Add && mod.Magnitude < 0f)
+                    {
+                        float damage = -mod.Magnitude;
+                        if (data.Shield > 0f)
+                        {
+                            float absorbed = data.Shield < damage ? data.Shield : damage;
+                            data.Shield -= absorbed;
+                            damage -= absorbed;
+                        }
+
+                        if (damage > 0f)
+                            data.Health -= damage;
+                    }
+                    else
+                    {
+                        data.Health = ApplyOp(data.Health, mod.Op, mod.Magnitude);
+                    }
                     break;
                 case AttributeId.Mana:
                     data.Mana = ApplyOp(data.Mana, mod.Op, mod.Magnitude);
@@ -40,6 +57,12 @@ namespace Tyrsha.Eciton
                     break;
                 case AttributeId.Agility:
                     data.Agility = ApplyOp(data.Agility, mod.Op, mod.Magnitude);
+                    break;
+                case AttributeId.Shield:
+                    data.Shield = ApplyOp(data.Shield, mod.Op, mod.Magnitude);
+                    break;
+                case AttributeId.MoveSpeed:
+                    data.MoveSpeed = ApplyOp(data.MoveSpeed, mod.Op, mod.Magnitude);
                     break;
             }
         }

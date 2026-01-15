@@ -11,6 +11,8 @@ namespace Tyrsha.Eciton
         Mana = 2,
         Strength = 3,
         Agility = 4,
+        Shield = 5,
+        MoveSpeed = 6,
     }
 
     public enum AttributeModOp : byte

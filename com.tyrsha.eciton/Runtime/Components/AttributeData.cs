@@ -8,5 +8,7 @@ namespace Tyrsha.Eciton
         public float Mana;
         public float Strength;
         public float Agility;
+        public float Shield;
+        public float MoveSpeed;
     }
 }

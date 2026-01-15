@@ -24,12 +24,12 @@ namespace Tyrsha.Eciton
     /// <summary>예제 전용 Ability/Effect ID 모음.</summary>
     public static class ExampleIds
     {
-        public const int Ability_Fireball = 1;
+        public const int Ability_Fireball = CommonIds.Ability_Fireball;
 
-        public const int Effect_FireballImpactDamage = 1;
-        public const int Effect_BurnDot = 2;
+        public const int Effect_FireballImpactDamage = CommonIds.Effect_InstantDamage;
+        public const int Effect_BurnDot = CommonIds.Effect_BurnDot;
 
-        public const int Tag_Burning = 1001;
+        public const int Tag_Burning = CommonIds.Tag_Burning;
     }
 }
 

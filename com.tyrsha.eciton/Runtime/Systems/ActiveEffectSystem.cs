@@ -44,6 +44,13 @@ namespace Tyrsha.Eciton
                             // 만료 시 태그 제거
                             if (effect.GrantedTag.IsValid)
                                 removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = effect.GrantedTag });
+
+                            // 만료 시 지속형(비주기) modifier 되돌리기
+                            if (!effect.IsPeriodic && effect.RevertModifierOnEnd)
+                            {
+                                var inverse = Invert(effect.Modifier);
+                                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = inverse });
+                            }
                             activeEffects.RemoveAt(i);
                             continue;
                         }
@@ -52,6 +59,25 @@ namespace Tyrsha.Eciton
                     activeEffects[i] = effect;
                 }
             }).Schedule();
+        }
+
+        private static AttributeModifier Invert(AttributeModifier mod)
+        {
+            switch (mod.Op)
+            {
+                case AttributeModOp.Add:
+                    mod.Magnitude = -mod.Magnitude;
+                    return mod;
+                case AttributeModOp.Multiply:
+                    if (mod.Magnitude != 0f)
+                        mod.Magnitude = 1f / mod.Magnitude;
+                    return mod;
+                case AttributeModOp.Override:
+                default:
+                    // 스텁: Override는 되돌리기 불가로 취급
+                    mod.Magnitude = 0f;
+                    return mod;
+            }
         }
     }
 }
