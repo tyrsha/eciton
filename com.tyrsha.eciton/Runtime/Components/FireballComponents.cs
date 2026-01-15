@@ -13,12 +13,8 @@ namespace Tyrsha.Eciton
 
         /// <summary>충돌까지 남은 비행 시간(초). 0 이하가 되면 충돌/폭발 처리.</summary>
         public float RemainingFlightTime;
-
-        public float ImpactDamage;
-
-        public float BurnDuration;
-        public float BurnDamagePerSecond;
-        public float BurnTickPeriod;
+        public int PrimaryEffectId;
+        public int SecondaryEffectId;
     }
 
     /// <summary>예제 전용 Ability/Effect ID 모음.</summary>

@@ -11,6 +11,9 @@ namespace Tyrsha.Eciton
     {
         protected override void OnUpdate()
         {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+
             var em = EntityManager;
 
             Entities.WithoutBurst().ForEach((
@@ -53,50 +56,44 @@ namespace Tyrsha.Eciton
                     switch (abilityId)
                     {
                         case CommonIds.Ability_Heal:
-                            EnsureBuffer<ApplyEffectRequest>(em, target).Add(new ApplyEffectRequest
+                            if (AbilityEffectDatabaseLookup.TryGetAbility(db, abilityId, out var healDef) && healDef.PrimaryEffectId != 0)
                             {
-                                Spec = new EffectSpec
+                                EnsureBuffer<ApplyEffectByIdRequest>(em, target).Add(new ApplyEffectByIdRequest
                                 {
-                                    EffectId = CommonIds.Effect_HealInstant,
+                                    EffectId = healDef.PrimaryEffectId,
                                     Level = 1,
                                     Source = entity,
-                                    Target = target,
-                                    Duration = 0f,
-                                    IsPermanent = true,
-                                    IsPeriodic = false,
-                                    Period = 0f,
-                                    GrantedTag = GameplayTag.Invalid,
-                                    RevertModifierOnEnd = false,
-                                    Modifier = new AttributeModifier
-                                    {
-                                        Attribute = AttributeId.Health,
-                                        Op = AttributeModOp.Add,
-                                        Magnitude = 25f,
-                                    }
-                                }
-                            });
+                                    Target = target
+                                });
+                            }
                             tryActivate.RemoveAt(i);
                             break;
 
                         case CommonIds.Ability_Cleanse:
-                            // 스텁: Burning 태그 기반으로 효과 제거(DoT 중단) + 태그 제거
-                            EnsureBuffer<RemoveEffectsWithTagRequest>(em, target)
-                                .Add(new RemoveEffectsWithTagRequest { Tag = new GameplayTag { Value = CommonIds.Tag_Burning } });
-                            EnsureBuffer<RemoveGameplayTagRequest>(em, target)
-                                .Add(new RemoveGameplayTagRequest { Tag = new GameplayTag { Value = CommonIds.Tag_Burning } });
+                            // 스텁: 정의된 태그 기반으로 효과 제거 + 태그 제거
+                            if (AbilityEffectDatabaseLookup.TryGetAbility(db, abilityId, out var cleanseDef) && cleanseDef.CleanseTag.IsValid)
+                            {
+                                EnsureBuffer<RemoveEffectsWithTagRequest>(em, target)
+                                    .Add(new RemoveEffectsWithTagRequest { Tag = cleanseDef.CleanseTag });
+                                EnsureBuffer<RemoveGameplayTagRequest>(em, target)
+                                    .Add(new RemoveGameplayTagRequest { Tag = cleanseDef.CleanseTag });
+                            }
                             tryActivate.RemoveAt(i);
                             break;
 
                         case CommonIds.Ability_StunBolt:
-                            // 투사체 스폰(비행 시간 후 스턴 적용)
-                            var projectile = em.CreateEntity();
-                            em.AddComponentData(projectile, new StunBoltProjectile
+                            if (AbilityEffectDatabaseLookup.TryGetAbility(db, abilityId, out var stunDef))
                             {
-                                Source = entity,
-                                Target = target,
-                                RemainingFlightTime = 0.25f,
-                                StunDuration = 2.0f,
-                            });
+                                // 투사체 스폰(비행 시간 후 스턴 적용)
+                                var projectile = em.CreateEntity();
+                                em.AddComponentData(projectile, new StunBoltProjectile
+                                {
+                                    Source = entity,
+                                    Target = target,
+                                    RemainingFlightTime = stunDef.ProjectileFlightTime,
+                                    EffectId = stunDef.PrimaryEffectId,
+                                });
+                            }
                             tryActivate.RemoveAt(i);
                             break;
                     }

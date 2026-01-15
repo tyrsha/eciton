@@ -11,6 +11,9 @@ namespace Tyrsha.Eciton
     {
         protected override void OnUpdate()
         {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+
             var em = EntityManager;
 
             // 스텁 예제이므로 main thread에서 처리(간단/명확성 우선).
@@ -47,6 +50,9 @@ namespace Tyrsha.Eciton
                     if (abilityId != ExampleIds.Ability_Fireball)
                         continue;
 
+                    if (!AbilityEffectDatabaseLookup.TryGetAbility(db, abilityId, out var def))
+                        continue;
+
                     // Fireball 투사체 스폰
                     var projectile = em.CreateEntity();
                     var target = request.Target != Entity.Null ? request.Target : request.TargetData.Target;
@@ -54,11 +60,9 @@ namespace Tyrsha.Eciton
                     {
                         Source = entity,
                         Target = target,
-                        RemainingFlightTime = 0.35f,
-                        ImpactDamage = 30f,
-                        BurnDuration = 5f,
-                        BurnDamagePerSecond = 4f,
-                        BurnTickPeriod = 1f,
+                        RemainingFlightTime = def.ProjectileFlightTime,
+                        PrimaryEffectId = def.PrimaryEffectId,
+                        SecondaryEffectId = def.SecondaryEffectId,
                     });
 
                     // 요청 소비

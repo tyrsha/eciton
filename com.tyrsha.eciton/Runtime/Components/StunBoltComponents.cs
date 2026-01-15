@@ -8,7 +8,7 @@ namespace Tyrsha.Eciton
         public Entity Source;
         public Entity Target;
         public float RemainingFlightTime;
-        public float StunDuration;
+        public int EffectId;
     }
 }
 

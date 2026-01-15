@@ -32,12 +32,9 @@ namespace Tyrsha.Eciton
             em.AddComponentData(actor2, new AttributeData { Health = 100f, Mana = 50f, Strength = 8f, Agility = 8f });
             EnsureAscBuffers(em, actor2);
 
-            // Actor1에게 Fireball 부여
-            var granted = em.GetBuffer<GrantedAbility>(actor1);
-            var fireballHandle = new AbilityHandle { Value = 1 };
-            granted.Add(new GrantedAbility
+            // Actor1에게 Fireball 부여(데이터 드리븐)
+            em.GetBuffer<GrantAbilityRequest>(actor1).Add(new GrantAbilityRequest
             {
-                Handle = fireballHandle,
                 AbilityId = ExampleIds.Ability_Fireball,
                 Level = 1,
                 Source = actor1,
@@ -45,16 +42,20 @@ namespace Tyrsha.Eciton
 
             // Actor1이 Actor2를 타겟으로 Fireball 활성화 요청
             var tryActivate = em.GetBuffer<TryActivateAbilityRequest>(actor1);
-            tryActivate.Add(new TryActivateAbilityRequest { Handle = fireballHandle, Target = actor2, TargetData = new TargetData { Target = actor2 } });
+            // NOTE: Handle은 Grant 이후 생성되므로, 스텁에서는 Handle=1을 가정(AbilityGrantSystem의 첫 핸들).
+            // 실제 게임에서는 입력/AI가 GrantedAbility 목록에서 핸들을 조회해 요청을 생성한다.
+            tryActivate.Add(new TryActivateAbilityRequest { Handle = new AbilityHandle { Value = 1, Version = 1 }, Target = actor2, TargetData = new TargetData { Target = actor2 } });
         }
 
         private static void EnsureAscBuffers(EntityManager em, Entity entity)
         {
             if (!em.HasBuffer<GrantedAbility>(entity)) em.AddBuffer<GrantedAbility>(entity);
+            if (!em.HasBuffer<GrantAbilityRequest>(entity)) em.AddBuffer<GrantAbilityRequest>(entity);
             if (!em.HasBuffer<TryActivateAbilityRequest>(entity)) em.AddBuffer<TryActivateAbilityRequest>(entity);
             if (!em.HasBuffer<CancelAbilityRequest>(entity)) em.AddBuffer<CancelAbilityRequest>(entity);
 
             if (!em.HasBuffer<ApplyEffectRequest>(entity)) em.AddBuffer<ApplyEffectRequest>(entity);
+            if (!em.HasBuffer<ApplyEffectByIdRequest>(entity)) em.AddBuffer<ApplyEffectByIdRequest>(entity);
             if (!em.HasBuffer<RemoveEffectRequest>(entity)) em.AddBuffer<RemoveEffectRequest>(entity);
             if (!em.HasBuffer<ActiveEffect>(entity)) em.AddBuffer<ActiveEffect>(entity);
 
