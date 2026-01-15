@@ -60,6 +60,17 @@ namespace Tyrsha.Eciton
     }
 
     /// <summary>
+    /// Ability 부여 요청(데이터 드리븐). DB로부터 GrantedAbility를 생성한다.
+    /// </summary>
+    [InternalBufferCapacity(4)]
+    public struct GrantAbilityRequest : IBufferElementData
+    {
+        public int AbilityId;
+        public int Level;
+        public Entity Source;
+    }
+
+    /// <summary>
     /// Ability 취소 요청 스텁.
     /// </summary>
     [InternalBufferCapacity(2)]
