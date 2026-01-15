@@ -30,7 +30,7 @@ namespace Tyrsha.Eciton
                             effect.TimeToNextTick -= dt;
                             while (effect.TimeToNextTick <= 0f)
                             {
-                                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = effect.Modifier });
+                                ApplyAll(attributeRequests, effect);
                                 effect.TimeToNextTick += period;
                             }
                         }
@@ -48,8 +48,7 @@ namespace Tyrsha.Eciton
                             // 만료 시 지속형(비주기) modifier 되돌리기
                             if (!effect.IsPeriodic && effect.RevertModifierOnEnd)
                             {
-                                var inverse = Invert(effect.Modifier);
-                                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = inverse });
+                                RevertAll(attributeRequests, effect);
                             }
                             activeEffects.RemoveAt(i);
                             continue;
@@ -78,6 +77,41 @@ namespace Tyrsha.Eciton
                     mod.Magnitude = 0f;
                     return mod;
             }
+        }
+
+        private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, ActiveEffect effect)
+        {
+            if (effect.Modifiers.Length > 0)
+            {
+                for (int i = 0; i < effect.Modifiers.Length; i++)
+                {
+                    var mod = effect.Modifiers[i];
+                    if (mod.Magnitude != 0f)
+                        attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
+                }
+                return;
+            }
+
+            if (effect.Modifier.Magnitude != 0f)
+                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = effect.Modifier });
+        }
+
+        private static void RevertAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, ActiveEffect effect)
+        {
+            if (effect.Modifiers.Length > 0)
+            {
+                for (int i = 0; i < effect.Modifiers.Length; i++)
+                {
+                    var inv = Invert(effect.Modifiers[i]);
+                    if (inv.Magnitude != 0f)
+                        attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = inv });
+                }
+                return;
+            }
+
+            var inverse = Invert(effect.Modifier);
+            if (inverse.Magnitude != 0f)
+                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = inverse });
         }
     }
 }

@@ -51,7 +51,7 @@ namespace Tyrsha.Eciton
         public EffectStackingPolicy StackingPolicy;
         public int MaxStacks;
 
-        public AttributeModifier Modifier;
+        public BlobArray<AttributeModifier> Modifiers;
     }
 
     public struct AbilityEffectDatabaseBlob

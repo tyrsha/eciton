@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -57,6 +58,11 @@ namespace Tyrsha.Eciton
 
         /// <summary>단일 modifier 스텁(복수는 이후 확장).</summary>
         public AttributeModifier Modifier;
+
+        /// <summary>
+        /// 다중 modifier 지원(데이터 드리븐). 비어있으면 `Modifier`(단일)를 사용한다.
+        /// </summary>
+        public FixedList128Bytes<AttributeModifier> Modifiers;
     }
 
     /// <summary>
@@ -93,6 +99,11 @@ namespace Tyrsha.Eciton
         public EffectStackingPolicy StackingPolicy;
         public int MaxStacks;
         public int StackCount;
+
+        /// <summary>
+        /// 다중 modifier 지원. 비어있으면 `Modifier`(단일)를 사용한다.
+        /// </summary>
+        public FixedList128Bytes<AttributeModifier> Modifiers;
     }
 
     /// <summary>

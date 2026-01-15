@@ -40,13 +40,26 @@ namespace Tyrsha.Eciton
                             RevertModifierOnEnd = def.RevertModifierOnEnd,
                             StackingPolicy = def.StackingPolicy,
                             MaxStacks = def.MaxStacks,
-                            Modifier = def.Modifier,
+                            Modifier = default,
+                            Modifiers = ToFixedList(def.Modifiers),
                         }
                     });
                 }
 
                 byId.Clear();
             }).Schedule();
+        }
+
+        private static Unity.Collections.FixedList128Bytes<AttributeModifier> ToFixedList(BlobArray<AttributeModifier> mods)
+        {
+            var list = new Unity.Collections.FixedList128Bytes<AttributeModifier>();
+            for (int i = 0; i < mods.Length; i++)
+            {
+                if (list.Capacity == list.Length)
+                    break;
+                list.Add(mods[i]);
+            }
+            return list;
         }
     }
 }

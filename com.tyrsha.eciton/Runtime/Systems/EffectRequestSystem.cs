@@ -38,7 +38,7 @@ namespace Tyrsha.Eciton
                     // 비주기(즉시) 효과: 바로 modifier 적용.
                     if (!spec.IsPeriodic)
                     {
-                        attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = spec.Modifier });
+                        ApplyAll(attributeRequests, spec);
                     }
 
                     // 태그 부여(즉시/지속 상관없이 적용 시점에 1회 추가).
@@ -79,8 +79,8 @@ namespace Tyrsha.Eciton
                                             existing.StackCount++;
 
                                         // 스텁: 스택이 쌓일 때마다 즉시 modifier를 한 번 더 적용(DoT는 다음 틱부터 자연히 누적됨).
-                                        if (!spec.IsPeriodic && spec.Modifier.Magnitude != 0f)
-                                            attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = spec.Modifier });
+                                        if (!spec.IsPeriodic)
+                                            ApplyAll(attributeRequests, spec);
 
                                         if (!existing.IsPermanent)
                                             existing.RemainingTime = spec.Duration;
@@ -103,6 +103,7 @@ namespace Tyrsha.Eciton
                             RemainingTime = spec.IsPermanent ? 0f : spec.Duration,
                             IsPermanent = spec.IsPermanent,
                             Modifier = spec.Modifier,
+                            Modifiers = spec.Modifiers,
                             IsPeriodic = spec.IsPeriodic,
                             Period = spec.Period,
                             // 스텁: 첫 틱은 Period 이후부터.
@@ -160,6 +161,23 @@ namespace Tyrsha.Eciton
             }).Schedule();
 
             _nextHandle = nextHandle;
+        }
+
+        private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectSpec spec)
+        {
+            if (spec.Modifiers.Length > 0)
+            {
+                for (int i = 0; i < spec.Modifiers.Length; i++)
+                {
+                    var mod = spec.Modifiers[i];
+                    if (mod.Magnitude != 0f)
+                        attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
+                }
+                return;
+            }
+
+            if (spec.Modifier.Magnitude != 0f)
+                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = spec.Modifier });
         }
     }
 }
