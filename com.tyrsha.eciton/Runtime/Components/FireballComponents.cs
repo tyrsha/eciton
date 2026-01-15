@@ -28,6 +28,8 @@ namespace Tyrsha.Eciton
 
         public const int Effect_FireballImpactDamage = 1;
         public const int Effect_BurnDot = 2;
+
+        public const int Tag_Burning = 1001;
     }
 }
 

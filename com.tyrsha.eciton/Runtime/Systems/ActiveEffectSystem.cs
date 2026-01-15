@@ -15,7 +15,8 @@ namespace Tyrsha.Eciton
 
             Entities.ForEach((
                 DynamicBuffer<ActiveEffect> activeEffects,
-                DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests) =>
+                DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests,
+                DynamicBuffer<RemoveGameplayTagRequest> removeTagRequests) =>
             {
                 for (int i = activeEffects.Length - 1; i >= 0; i--)
                 {
@@ -40,6 +41,9 @@ namespace Tyrsha.Eciton
                         effect.RemainingTime -= dt;
                         if (effect.RemainingTime <= 0f)
                         {
+                            // 만료 시 태그 제거
+                            if (effect.GrantedTag.IsValid)
+                                removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = effect.GrantedTag });
                             activeEffects.RemoveAt(i);
                             continue;
                         }

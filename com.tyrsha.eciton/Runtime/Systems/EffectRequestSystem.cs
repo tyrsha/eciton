@@ -25,7 +25,9 @@ namespace Tyrsha.Eciton
                 DynamicBuffer<ActiveEffect> activeEffects,
                 DynamicBuffer<ApplyEffectRequest> applyRequests,
                 DynamicBuffer<RemoveEffectRequest> removeRequests,
-                DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests) =>
+                DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests,
+                DynamicBuffer<AddGameplayTagRequest> addTagRequests,
+                DynamicBuffer<RemoveGameplayTagRequest> removeTagRequests) =>
             {
                 // Apply
                 for (int i = 0; i < applyRequests.Length; i++)
@@ -37,6 +39,10 @@ namespace Tyrsha.Eciton
                     {
                         attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = spec.Modifier });
                     }
+
+                    // 태그 부여(즉시/지속 상관없이 적용 시점에 1회 추가).
+                    if (spec.GrantedTag.IsValid)
+                        addTagRequests.Add(new AddGameplayTagRequest { Tag = spec.GrantedTag });
 
                     // 지속/주기 효과는 ActiveEffect로 관리한다.
                     // (Duration<=0 이면서 비주기면 ActiveEffect를 만들지 않는다.)
@@ -60,6 +66,7 @@ namespace Tyrsha.Eciton
                             Period = spec.Period,
                             // 스텁: 첫 틱은 Period 이후부터.
                             TimeToNextTick = spec.IsPeriodic ? spec.Period : 0f,
+                            GrantedTag = spec.GrantedTag,
                         });
                     }
                 }
@@ -73,7 +80,13 @@ namespace Tyrsha.Eciton
                     for (int e = activeEffects.Length - 1; e >= 0; e--)
                     {
                         if (activeEffects[e].Handle.Value == handle.Value)
+                        {
+                            // 태그 제거 요청(효과 강제 제거 시)
+                            var tag = activeEffects[e].GrantedTag;
+                            if (tag.IsValid)
+                                removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = tag });
                             activeEffects.RemoveAt(e);
+                        }
                     }
                 }
 

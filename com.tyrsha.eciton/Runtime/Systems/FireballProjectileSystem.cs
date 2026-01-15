@@ -41,6 +41,7 @@ namespace Tyrsha.Eciton
                             IsPermanent = true,
                             IsPeriodic = false,
                             Period = 0f,
+                            GrantedTag = GameplayTag.Invalid,
                             Modifier = new AttributeModifier
                             {
                                 Attribute = AttributeId.Health,
@@ -66,6 +67,7 @@ namespace Tyrsha.Eciton
                             IsPermanent = false,
                             IsPeriodic = true,
                             Period = period,
+                            GrantedTag = new GameplayTag { Value = ExampleIds.Tag_Burning },
                             Modifier = new AttributeModifier
                             {
                                 Attribute = AttributeId.Health,

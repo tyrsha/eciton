@@ -30,6 +30,12 @@ namespace Tyrsha.Eciton
         /// <summary>주기 효과의 틱 간격(초). IsPeriodic=true일 때 사용.</summary>
         public float Period;
 
+        /// <summary>
+        /// Effect가 활성화된 동안(또는 즉시 효과라면 적용 시점에) 부여할 태그 스텁.
+        /// 유효한 태그면 추가/제거 요청이 발행된다.
+        /// </summary>
+        public GameplayTag GrantedTag;
+
         /// <summary>단일 modifier 스텁(복수는 이후 확장).</summary>
         public AttributeModifier Modifier;
     }
@@ -58,6 +64,9 @@ namespace Tyrsha.Eciton
 
         /// <summary>다음 틱까지 남은 시간(초).</summary>
         public float TimeToNextTick;
+
+        /// <summary>활성화된 동안 부여 중인 태그(유효할 때만 의미).</summary>
+        public GameplayTag GrantedTag;
     }
 
     /// <summary>

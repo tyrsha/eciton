@@ -6,6 +6,8 @@ namespace Tyrsha.Eciton
     /// 태그 추가/제거 요청을 처리하는 최소 스텁 시스템.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateAfter(typeof(EffectRequestSystem))]
+    [UpdateAfter(typeof(ActiveEffectSystem))]
     public class GameplayTagSystem : SystemBase
     {
         protected override void OnUpdate()
