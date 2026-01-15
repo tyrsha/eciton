@@ -10,6 +10,8 @@ namespace Tyrsha.Eciton.Tests
 
         private CommonAbilitySystems _commonAbilities;
         private FireballAbilitySystem _fireballAbility;
+        private AbilityGrantSystem _grant;
+        private EffectFromDatabaseSystem _effectFromDb;
 
         [SetUp]
         public void SetUp()
@@ -17,6 +19,10 @@ namespace Tyrsha.Eciton.Tests
             _world = new World("EcitonAbilityTests");
             _em = _world.EntityManager;
 
+            CreateTestDatabaseSingleton();
+
+            _grant = _world.CreateSystemManaged<AbilityGrantSystem>();
+            _effectFromDb = _world.CreateSystemManaged<EffectFromDatabaseSystem>();
             _commonAbilities = _world.CreateSystemManaged<CommonAbilitySystems>();
             _fireballAbility = _world.CreateSystemManaged<FireballAbilitySystem>();
         }
@@ -72,14 +78,14 @@ namespace Tyrsha.Eciton.Tests
         {
             var actor = CreateAscActor(health: 50f);
 
-            var handle = new AbilityHandle { Value = 1 };
-            _em.GetBuffer<GrantedAbility>(actor).Add(new GrantedAbility
+            _em.GetBuffer<GrantAbilityRequest>(actor).Add(new GrantAbilityRequest
             {
-                Handle = handle,
                 AbilityId = CommonIds.Ability_Heal,
                 Level = 1,
                 Source = actor
             });
+            _grant.Update();
+            var handle = _em.GetBuffer<GrantedAbility>(actor)[0].Handle;
 
             _em.GetBuffer<TryActivateAbilityRequest>(actor).Add(new TryActivateAbilityRequest
             {
@@ -90,6 +96,10 @@ namespace Tyrsha.Eciton.Tests
             _commonAbilities.Update();
 
             // Heal은 ApplyEffectRequest가 target(=self)에 쌓인다.
+            Assert.AreEqual(1, _em.GetBuffer<ApplyEffectByIdRequest>(actor).Length);
+
+            // DB 변환 시스템을 돌리면 ApplyEffectRequest로 변환된다.
+            _effectFromDb.Update();
             Assert.AreEqual(1, _em.GetBuffer<ApplyEffectRequest>(actor).Length);
         }
 
@@ -166,10 +176,12 @@ namespace Tyrsha.Eciton.Tests
             });
 
             _em.AddBuffer<GrantedAbility>(e);
+            _em.AddBuffer<GrantAbilityRequest>(e);
             _em.AddBuffer<TryActivateAbilityRequest>(e);
             _em.AddBuffer<CancelAbilityRequest>(e);
 
             _em.AddBuffer<ApplyEffectRequest>(e);
+            _em.AddBuffer<ApplyEffectByIdRequest>(e);
             _em.AddBuffer<RemoveEffectRequest>(e);
             _em.AddBuffer<RemoveEffectsWithTagRequest>(e);
             _em.AddBuffer<ActiveEffect>(e);
@@ -179,6 +191,47 @@ namespace Tyrsha.Eciton.Tests
             _em.AddBuffer<AddGameplayTagRequest>(e);
             _em.AddBuffer<RemoveGameplayTagRequest>(e);
             return e;
+        }
+
+        private void CreateTestDatabaseSingleton()
+        {
+            var builder = new BlobBuilder(Allocator.Temp);
+            ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
+
+            var abilities = builder.Allocate(ref root.Abilities, 1);
+            abilities[0] = new AbilityDefinition
+            {
+                AbilityId = CommonIds.Ability_Heal,
+                ExecutionType = AbilityExecutionType.ApplyEffectToTarget,
+                CooldownDuration = 2f,
+                ManaCost = 0f,
+                PrimaryEffectId = CommonIds.Effect_HealInstant,
+                SecondaryEffectId = 0,
+                CleanseTag = GameplayTag.Invalid,
+                ProjectileFlightTime = 0f,
+                TagRequirements = default
+            };
+
+            var effects = builder.Allocate(ref root.Effects, 1);
+            effects[0] = new EffectDefinition
+            {
+                EffectId = CommonIds.Effect_HealInstant,
+                Duration = 0f,
+                IsPermanent = true,
+                IsPeriodic = false,
+                Period = 0f,
+                GrantedTag = GameplayTag.Invalid,
+                RevertModifierOnEnd = false,
+                StackingPolicy = EffectStackingPolicy.None,
+                MaxStacks = 1,
+                Modifier = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = 25f }
+            };
+
+            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
+            builder.Dispose();
+
+            var dbEntity = _em.CreateEntity();
+            _em.AddComponentData(dbEntity, new AbilityEffectDatabase { Blob = blob });
         }
     }
 }

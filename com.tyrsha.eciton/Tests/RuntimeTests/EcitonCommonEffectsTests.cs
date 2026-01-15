@@ -9,6 +9,7 @@ namespace Tyrsha.Eciton.Tests
         private EntityManager _em;
 
         private EffectRequestSystem _effectRequest;
+        private EffectFromDatabaseSystem _effectFromDb;
         private ActiveEffectSystem _activeEffect;
         private AttributeModifierSystem _attributeMod;
         private GameplayTagSystem _tagSystem;
@@ -19,6 +20,9 @@ namespace Tyrsha.Eciton.Tests
             _world = new World("EcitonTests");
             _em = _world.EntityManager;
 
+            CreateTestDatabaseSingleton();
+
+            _effectFromDb = _world.CreateSystemManaged<EffectFromDatabaseSystem>();
             _effectRequest = _world.CreateSystemManaged<EffectRequestSystem>();
             _activeEffect = _world.CreateSystemManaged<ActiveEffectSystem>();
             _attributeMod = _world.CreateSystemManaged<AttributeModifierSystem>();
@@ -37,28 +41,12 @@ namespace Tyrsha.Eciton.Tests
         {
             var target = CreateTarget(health: 100f, shield: 20f);
 
-            var apply = _em.GetBuffer<ApplyEffectRequest>(target);
-            apply.Add(new ApplyEffectRequest
+            _em.GetBuffer<ApplyEffectByIdRequest>(target).Add(new ApplyEffectByIdRequest
             {
-                Spec = new EffectSpec
-                {
-                    EffectId = CommonIds.Effect_InstantDamage,
-                    Level = 1,
-                    Source = target,
-                    Target = target,
-                    Duration = 0f,
-                    IsPermanent = true,
-                    IsPeriodic = false,
-                    Period = 0f,
-                    GrantedTag = GameplayTag.Invalid,
-                    RevertModifierOnEnd = false,
-                    Modifier = new AttributeModifier
-                    {
-                        Attribute = AttributeId.Health,
-                        Op = AttributeModOp.Add,
-                        Magnitude = -30f
-                    }
-                }
+                EffectId = CommonIds.Effect_InstantDamage,
+                Level = 1,
+                Source = target,
+                Target = target
             });
 
             Tick(dt: 0f);
@@ -73,40 +61,28 @@ namespace Tyrsha.Eciton.Tests
         {
             var target = CreateTarget(health: 100f, shield: 0f);
 
-            // Burn: 2초 동안 1초마다 -5
-            _em.GetBuffer<ApplyEffectRequest>(target).Add(new ApplyEffectRequest
+            // Burn은 DB 정의를 사용(예제 DB: 5초/1초/-4)
+            _em.GetBuffer<ApplyEffectByIdRequest>(target).Add(new ApplyEffectByIdRequest
             {
-                Spec = new EffectSpec
-                {
-                    EffectId = CommonIds.Effect_BurnDot,
-                    Level = 1,
-                    Source = target,
-                    Target = target,
-                    Duration = 2f,
-                    IsPermanent = false,
-                    IsPeriodic = true,
-                    Period = 1f,
-                    GrantedTag = new GameplayTag { Value = CommonIds.Tag_Burning },
-                    RevertModifierOnEnd = false,
-                    Modifier = new AttributeModifier
-                    {
-                        Attribute = AttributeId.Health,
-                        Op = AttributeModOp.Add,
-                        Magnitude = -5f
-                    }
-                }
+                EffectId = CommonIds.Effect_BurnDot,
+                Level = 1,
+                Source = target,
+                Target = target
             });
 
             // 적용 프레임: 태그 추가(틱은 아직)
             Tick(dt: 0f);
             Assert.IsTrue(HasTag(target, CommonIds.Tag_Burning));
 
-            // 2초 경과: 2틱 적용 + 만료로 태그 제거
+            // 5초 경과: 5틱 적용 + 만료로 태그 제거
+            Tick(dt: 1f);
+            Tick(dt: 1f);
+            Tick(dt: 1f);
             Tick(dt: 1f);
             Tick(dt: 1f);
 
             var attrs = _em.GetComponentData<AttributeData>(target);
-            Assert.AreEqual(90f, attrs.Health, 0.0001f);
+            Assert.AreEqual(80f, attrs.Health, 0.0001f);
             Assert.IsFalse(HasTag(target, CommonIds.Tag_Burning));
         }
 
@@ -115,27 +91,12 @@ namespace Tyrsha.Eciton.Tests
         {
             var target = CreateTarget(health: 100f, shield: 0f, moveSpeed: 10f);
 
-            _em.GetBuffer<ApplyEffectRequest>(target).Add(new ApplyEffectRequest
+            _em.GetBuffer<ApplyEffectByIdRequest>(target).Add(new ApplyEffectByIdRequest
             {
-                Spec = new EffectSpec
-                {
-                    EffectId = CommonIds.Effect_Slow,
-                    Level = 1,
-                    Source = target,
-                    Target = target,
-                    Duration = 2f,
-                    IsPermanent = false,
-                    IsPeriodic = false,
-                    Period = 0f,
-                    GrantedTag = new GameplayTag { Value = CommonIds.Tag_Slowed },
-                    RevertModifierOnEnd = true,
-                    Modifier = new AttributeModifier
-                    {
-                        Attribute = AttributeId.MoveSpeed,
-                        Op = AttributeModOp.Multiply,
-                        Magnitude = 0.5f
-                    }
-                }
+                EffectId = CommonIds.Effect_Slow,
+                Level = 1,
+                Source = target,
+                Target = target
             });
 
             Tick(dt: 0f);
@@ -154,28 +115,12 @@ namespace Tyrsha.Eciton.Tests
         {
             var target = CreateTarget(health: 100f, shield: 0f);
 
-            // Burn 5초, 1초마다 -5
-            _em.GetBuffer<ApplyEffectRequest>(target).Add(new ApplyEffectRequest
+            _em.GetBuffer<ApplyEffectByIdRequest>(target).Add(new ApplyEffectByIdRequest
             {
-                Spec = new EffectSpec
-                {
-                    EffectId = CommonIds.Effect_BurnDot,
-                    Level = 1,
-                    Source = target,
-                    Target = target,
-                    Duration = 5f,
-                    IsPermanent = false,
-                    IsPeriodic = true,
-                    Period = 1f,
-                    GrantedTag = new GameplayTag { Value = CommonIds.Tag_Burning },
-                    RevertModifierOnEnd = false,
-                    Modifier = new AttributeModifier
-                    {
-                        Attribute = AttributeId.Health,
-                        Op = AttributeModOp.Add,
-                        Magnitude = -5f
-                    }
-                }
+                EffectId = CommonIds.Effect_BurnDot,
+                Level = 1,
+                Source = target,
+                Target = target
             });
 
             Tick(dt: 0f);
@@ -183,7 +128,7 @@ namespace Tyrsha.Eciton.Tests
 
             // 1틱
             Tick(dt: 1f);
-            Assert.AreEqual(95f, _em.GetComponentData<AttributeData>(target).Health, 0.0001f);
+            Assert.AreEqual(96f, _em.GetComponentData<AttributeData>(target).Health, 0.0001f);
 
             // Cleanse: 태그 기반 효과 제거
             _em.GetBuffer<RemoveEffectsWithTagRequest>(target).Add(new RemoveEffectsWithTagRequest
@@ -195,7 +140,7 @@ namespace Tyrsha.Eciton.Tests
 
             // 이후 시간이 흘러도 추가 틱이 없어야 함
             Tick(dt: 2f);
-            Assert.AreEqual(95f, _em.GetComponentData<AttributeData>(target).Health, 0.0001f);
+            Assert.AreEqual(96f, _em.GetComponentData<AttributeData>(target).Health, 0.0001f);
         }
 
         [Test]
@@ -203,30 +148,13 @@ namespace Tyrsha.Eciton.Tests
         {
             var target = CreateTarget(health: 100f, shield: 0f);
 
-            // 2초짜리 burning(태그 기준으로 merge)
-            _em.GetBuffer<ApplyEffectRequest>(target).Add(new ApplyEffectRequest
+            // Burn은 DB 정의(RefreshDuration) 사용
+            _em.GetBuffer<ApplyEffectByIdRequest>(target).Add(new ApplyEffectByIdRequest
             {
-                Spec = new EffectSpec
-                {
-                    EffectId = CommonIds.Effect_BurnDot,
-                    Level = 1,
-                    Source = target,
-                    Target = target,
-                    Duration = 2f,
-                    IsPermanent = false,
-                    IsPeriodic = true,
-                    Period = 1f,
-                    GrantedTag = new GameplayTag { Value = CommonIds.Tag_Burning },
-                    RevertModifierOnEnd = false,
-                    StackingPolicy = EffectStackingPolicy.RefreshDuration,
-                    MaxStacks = 1,
-                    Modifier = new AttributeModifier
-                    {
-                        Attribute = AttributeId.Health,
-                        Op = AttributeModOp.Add,
-                        Magnitude = -1f
-                    }
-                }
+                EffectId = CommonIds.Effect_BurnDot,
+                Level = 1,
+                Source = target,
+                Target = target
             });
 
             Tick(dt: 0f);
@@ -236,29 +164,12 @@ namespace Tyrsha.Eciton.Tests
             Tick(dt: 1f);
             var before = _em.GetBuffer<ActiveEffect>(target)[0].RemainingTime;
 
-            _em.GetBuffer<ApplyEffectRequest>(target).Add(new ApplyEffectRequest
+            _em.GetBuffer<ApplyEffectByIdRequest>(target).Add(new ApplyEffectByIdRequest
             {
-                Spec = new EffectSpec
-                {
-                    EffectId = CommonIds.Effect_BurnDot,
-                    Level = 1,
-                    Source = target,
-                    Target = target,
-                    Duration = 2f,
-                    IsPermanent = false,
-                    IsPeriodic = true,
-                    Period = 1f,
-                    GrantedTag = new GameplayTag { Value = CommonIds.Tag_Burning },
-                    RevertModifierOnEnd = false,
-                    StackingPolicy = EffectStackingPolicy.RefreshDuration,
-                    MaxStacks = 1,
-                    Modifier = new AttributeModifier
-                    {
-                        Attribute = AttributeId.Health,
-                        Op = AttributeModOp.Add,
-                        Magnitude = -1f
-                    }
-                }
+                EffectId = CommonIds.Effect_BurnDot,
+                Level = 1,
+                Source = target,
+                Target = target
             });
 
             Tick(dt: 0f);
@@ -280,6 +191,7 @@ namespace Tyrsha.Eciton.Tests
             });
 
             _em.AddBuffer<ApplyEffectRequest>(e);
+            _em.AddBuffer<ApplyEffectByIdRequest>(e);
             _em.AddBuffer<RemoveEffectRequest>(e);
             _em.AddBuffer<RemoveEffectsWithTagRequest>(e);
             _em.AddBuffer<ActiveEffect>(e);
@@ -306,10 +218,67 @@ namespace Tyrsha.Eciton.Tests
             TrySetWorldTime(dt);
 
             // 의도한 파이프라인 순서
+            _effectFromDb.Update();
             _effectRequest.Update();
             _activeEffect.Update();
             _attributeMod.Update();
             _tagSystem.Update();
+        }
+
+        private void CreateTestDatabaseSingleton()
+        {
+            // 테스트용 DB를 직접 생성(ExampleDatabaseBootstrapSystem과 값 동일)
+            var builder = new BlobBuilder(Allocator.Temp);
+            ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
+
+            builder.Allocate(ref root.Abilities, 0);
+
+            var effects = builder.Allocate(ref root.Effects, 3);
+            effects[0] = new EffectDefinition
+            {
+                EffectId = CommonIds.Effect_InstantDamage,
+                Duration = 0f,
+                IsPermanent = true,
+                IsPeriodic = false,
+                Period = 0f,
+                GrantedTag = GameplayTag.Invalid,
+                RevertModifierOnEnd = false,
+                StackingPolicy = EffectStackingPolicy.None,
+                MaxStacks = 1,
+                Modifier = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -30f }
+            };
+            effects[1] = new EffectDefinition
+            {
+                EffectId = CommonIds.Effect_BurnDot,
+                Duration = 5f,
+                IsPermanent = false,
+                IsPeriodic = true,
+                Period = 1f,
+                GrantedTag = new GameplayTag { Value = CommonIds.Tag_Burning },
+                RevertModifierOnEnd = false,
+                StackingPolicy = EffectStackingPolicy.RefreshDuration,
+                MaxStacks = 1,
+                Modifier = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -4f }
+            };
+            effects[2] = new EffectDefinition
+            {
+                EffectId = CommonIds.Effect_Slow,
+                Duration = 2f,
+                IsPermanent = false,
+                IsPeriodic = false,
+                Period = 0f,
+                GrantedTag = new GameplayTag { Value = CommonIds.Tag_Slowed },
+                RevertModifierOnEnd = true,
+                StackingPolicy = EffectStackingPolicy.RefreshDuration,
+                MaxStacks = 1,
+                Modifier = new AttributeModifier { Attribute = AttributeId.MoveSpeed, Op = AttributeModOp.Multiply, Magnitude = 0.5f }
+            };
+
+            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
+            builder.Dispose();
+
+            var dbEntity = _em.CreateEntity();
+            _em.AddComponentData(dbEntity, new AbilityEffectDatabase { Blob = blob });
         }
 
         private void TrySetWorldTime(float dt)
