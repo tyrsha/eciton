@@ -25,6 +25,9 @@ namespace Tyrsha.Eciton.Presentation
                 presentation.IsBurning = HasTag(tags, CommonIds.Tag_Burning);
                 presentation.IsStunned = HasTag(tags, CommonIds.Tag_Stunned);
                 presentation.IsSlowed = HasTag(tags, CommonIds.Tag_Slowed);
+
+                // 스텁: 태그 기반으로 바로 VFX 토글
+                presentation.BurningVfxEnabled = presentation.IsBurning;
             }).ScheduleParallel();
         }
 

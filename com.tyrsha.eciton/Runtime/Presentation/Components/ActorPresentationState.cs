@@ -15,6 +15,9 @@ namespace Tyrsha.Eciton.Presentation
         public bool IsBurning;
         public bool IsStunned;
         public bool IsSlowed;
+
+        // 스텁: 연출 트리거용(예: 파티클 ON/OFF를 GO 브릿지에서 소비)
+        public bool BurningVfxEnabled;
     }
 }
 
