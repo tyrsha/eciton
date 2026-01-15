@@ -93,6 +93,64 @@ namespace Tyrsha.Eciton.Tests
             Assert.AreEqual(1, _em.GetBuffer<ApplyEffectRequest>(actor).Length);
         }
 
+        [Test]
+        public void Ability_gate_blocks_activation_when_on_cooldown_or_insufficient_mana()
+        {
+            var world = _world;
+            var gate = world.CreateSystemManaged<AbilityActivationGateSystem>();
+
+            var actor = CreateAscActor(health: 100f);
+            var target = CreateAscActor(health: 100f);
+
+            // 능력 부여: 쿨다운 10초, 마나 코스트 20
+            var handle = new AbilityHandle { Value = 7, Version = 1 };
+            _em.GetBuffer<GrantedAbility>(actor).Add(new GrantedAbility
+            {
+                Handle = handle,
+                AbilityId = CommonIds.Ability_Heal,
+                Level = 1,
+                Source = actor,
+                CooldownDuration = 10f,
+                CooldownRemaining = 5f,
+                ManaCost = 20f,
+                TagRequirements = default
+            });
+
+            // 마나 부족(0) + 쿨다운 중: 요청은 제거되어야 함
+            _em.GetBuffer<TryActivateAbilityRequest>(actor).Add(new TryActivateAbilityRequest
+            {
+                Handle = handle,
+                Target = target,
+                TargetData = new TargetData { Target = target }
+            });
+
+            gate.Update();
+            Assert.AreEqual(0, _em.GetBuffer<TryActivateAbilityRequest>(actor).Length);
+
+            // 쿨다운 0, 마나 충분이면 통과 + 코스트 차감 + 쿨다운 시작
+            var ga = _em.GetBuffer<GrantedAbility>(actor)[0];
+            ga.CooldownRemaining = 0f;
+            _em.GetBuffer<GrantedAbility>(actor)[0] = ga;
+
+            var attrs = _em.GetComponentData<AttributeData>(actor);
+            attrs.Mana = 50f;
+            _em.SetComponentData(actor, attrs);
+
+            _em.GetBuffer<TryActivateAbilityRequest>(actor).Add(new TryActivateAbilityRequest
+            {
+                Handle = handle,
+                Target = target,
+                TargetData = new TargetData { Target = target }
+            });
+
+            gate.Update();
+            Assert.AreEqual(1, _em.GetBuffer<TryActivateAbilityRequest>(actor).Length);
+
+            var after = _em.GetComponentData<AttributeData>(actor);
+            Assert.AreEqual(30f, after.Mana, 0.0001f);
+            Assert.Greater(_em.GetBuffer<GrantedAbility>(actor)[0].CooldownRemaining, 0f);
+        }
+
         private Entity CreateAscActor(float health = 100f)
         {
             var e = _em.CreateEntity();

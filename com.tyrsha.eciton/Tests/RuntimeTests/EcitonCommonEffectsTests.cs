@@ -198,6 +198,74 @@ namespace Tyrsha.Eciton.Tests
             Assert.AreEqual(95f, _em.GetComponentData<AttributeData>(target).Health, 0.0001f);
         }
 
+        [Test]
+        public void Effect_stacking_refresh_duration_resets_remaining_time()
+        {
+            var target = CreateTarget(health: 100f, shield: 0f);
+
+            // 2초짜리 burning(태그 기준으로 merge)
+            _em.GetBuffer<ApplyEffectRequest>(target).Add(new ApplyEffectRequest
+            {
+                Spec = new EffectSpec
+                {
+                    EffectId = CommonIds.Effect_BurnDot,
+                    Level = 1,
+                    Source = target,
+                    Target = target,
+                    Duration = 2f,
+                    IsPermanent = false,
+                    IsPeriodic = true,
+                    Period = 1f,
+                    GrantedTag = new GameplayTag { Value = CommonIds.Tag_Burning },
+                    RevertModifierOnEnd = false,
+                    StackingPolicy = EffectStackingPolicy.RefreshDuration,
+                    MaxStacks = 1,
+                    Modifier = new AttributeModifier
+                    {
+                        Attribute = AttributeId.Health,
+                        Op = AttributeModOp.Add,
+                        Magnitude = -1f
+                    }
+                }
+            });
+
+            Tick(dt: 0f);
+            Assert.AreEqual(1, _em.GetBuffer<ActiveEffect>(target).Length);
+
+            // 1초 진행 후 다시 적용 => remainingTime이 2로 리셋
+            Tick(dt: 1f);
+            var before = _em.GetBuffer<ActiveEffect>(target)[0].RemainingTime;
+
+            _em.GetBuffer<ApplyEffectRequest>(target).Add(new ApplyEffectRequest
+            {
+                Spec = new EffectSpec
+                {
+                    EffectId = CommonIds.Effect_BurnDot,
+                    Level = 1,
+                    Source = target,
+                    Target = target,
+                    Duration = 2f,
+                    IsPermanent = false,
+                    IsPeriodic = true,
+                    Period = 1f,
+                    GrantedTag = new GameplayTag { Value = CommonIds.Tag_Burning },
+                    RevertModifierOnEnd = false,
+                    StackingPolicy = EffectStackingPolicy.RefreshDuration,
+                    MaxStacks = 1,
+                    Modifier = new AttributeModifier
+                    {
+                        Attribute = AttributeId.Health,
+                        Op = AttributeModOp.Add,
+                        Magnitude = -1f
+                    }
+                }
+            });
+
+            Tick(dt: 0f);
+            var after = _em.GetBuffer<ActiveEffect>(target)[0].RemainingTime;
+            Assert.Less(before, after);
+        }
+
         private Entity CreateTarget(float health, float shield, float moveSpeed = 0f)
         {
             var e = _em.CreateEntity();
