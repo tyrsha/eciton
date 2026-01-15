@@ -19,6 +19,9 @@ namespace Tyrsha.Eciton.Authoring
         public int PrimaryEffectId;
         public int SecondaryEffectId;
         public int CleanseTagValue;
+
+        public int CooldownEffectId;
+        public int CooldownTagValue;
     }
 }
 

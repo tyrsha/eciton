@@ -35,7 +35,9 @@ namespace Tyrsha.Eciton.Authoring
                     PrimaryEffectId = a.PrimaryEffectId,
                     SecondaryEffectId = a.SecondaryEffectId,
                     CleanseTag = a.CleanseTagValue == 0 ? GameplayTag.Invalid : new GameplayTag { Value = a.CleanseTagValue },
-                    TagRequirements = default
+                    TagRequirements = default,
+                    CooldownEffectId = a.CooldownEffectId,
+                    CooldownTag = a.CooldownTagValue == 0 ? GameplayTag.Invalid : new GameplayTag { Value = a.CooldownTagValue },
                 };
             }
 
@@ -54,13 +56,36 @@ namespace Tyrsha.Eciton.Authoring
                     RevertModifierOnEnd = e.RevertModifierOnEnd,
                     StackingPolicy = e.StackingPolicy,
                     MaxStacks = e.MaxStacks <= 0 ? 1 : e.MaxStacks,
-                    Modifier = new AttributeModifier
+                    BlockedByTag = e.BlockedByTagValue == 0 ? GameplayTag.Invalid : new GameplayTag { Value = e.BlockedByTagValue },
+                };
+
+                // Modifiers allocate per effect
+                int modCount = (e.Modifiers != null && e.Modifiers.Length > 0) ? e.Modifiers.Length : 1;
+                var mods = builder.Allocate(ref effects[i].Modifiers, modCount);
+                if (e.Modifiers != null && e.Modifiers.Length > 0)
+                {
+                    for (int m = 0; m < e.Modifiers.Length; m++)
+                    {
+                        var src = e.Modifiers[m];
+                        mods[m] = new AttributeModifier
+                        {
+                            Attribute = src.Attribute,
+                            Op = src.Op,
+                            Magnitude = src.Magnitude,
+                            DamageType = src.DamageType
+                        };
+                    }
+                }
+                else
+                {
+                    mods[0] = new AttributeModifier
                     {
                         Attribute = e.ModifierAttribute,
                         Op = e.ModifierOp,
-                        Magnitude = e.ModifierMagnitude
-                    }
-                };
+                        Magnitude = e.ModifierMagnitude,
+                        DamageType = e.ModifierDamageType
+                    };
+                }
             }
 
             var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
