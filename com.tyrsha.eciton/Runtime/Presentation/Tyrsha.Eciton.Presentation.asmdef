@@ -1,11 +1,8 @@
 {
-  "name": "Tyrsha.Eciton.RuntimeTests",
+  "name": "Tyrsha.Eciton.Presentation",
   "references": [
     "Tyrsha.Eciton",
     "Unity.Entities"
-  ],
-  "optionalUnityReferences": [
-    "TestAssemblies"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
