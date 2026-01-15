@@ -53,6 +53,46 @@ namespace Tyrsha.Eciton
 
                     if (needsActive)
                     {
+                        // 스태킹 처리(EffectId + GrantedTag 기준 스텁)
+                        if (spec.StackingPolicy != EffectStackingPolicy.None)
+                        {
+                            for (int e = 0; e < activeEffects.Length; e++)
+                            {
+                                if (activeEffects[e].EffectId == spec.EffectId &&
+                                    activeEffects[e].GrantedTag.Value == spec.GrantedTag.Value)
+                                {
+                                    var existing = activeEffects[e];
+                                    existing.StackingPolicy = spec.StackingPolicy;
+                                    existing.MaxStacks = spec.MaxStacks;
+
+                                    int maxStacks = existing.MaxStacks <= 0 ? 1 : existing.MaxStacks;
+                                    if (existing.StackCount <= 0) existing.StackCount = 1;
+
+                                    if (spec.StackingPolicy == EffectStackingPolicy.RefreshDuration)
+                                    {
+                                        if (!existing.IsPermanent)
+                                            existing.RemainingTime = spec.Duration;
+                                    }
+                                    else if (spec.StackingPolicy == EffectStackingPolicy.StackAdditive)
+                                    {
+                                        if (existing.StackCount < maxStacks)
+                                            existing.StackCount++;
+
+                                        // 스텁: 스택이 쌓일 때마다 즉시 modifier를 한 번 더 적용(DoT는 다음 틱부터 자연히 누적됨).
+                                        if (!spec.IsPeriodic && spec.Modifier.Magnitude != 0f)
+                                            attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = spec.Modifier });
+
+                                        if (!existing.IsPermanent)
+                                            existing.RemainingTime = spec.Duration;
+                                    }
+
+                                    activeEffects[e] = existing;
+                                    // 이미 합쳐졌으므로 신규 생성 스킵
+                                    goto Applied;
+                                }
+                            }
+                        }
+
                         var handle = new EffectHandle { Value = nextHandle++ };
                         activeEffects.Add(new ActiveEffect
                         {
@@ -69,8 +109,14 @@ namespace Tyrsha.Eciton
                             TimeToNextTick = spec.IsPeriodic ? spec.Period : 0f,
                             GrantedTag = spec.GrantedTag,
                             RevertModifierOnEnd = spec.RevertModifierOnEnd,
+                            StackingPolicy = spec.StackingPolicy,
+                            MaxStacks = spec.MaxStacks,
+                            StackCount = 1,
                         });
                     }
+
+                Applied:
+                    ;
                 }
 
                 // Remove

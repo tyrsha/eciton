@@ -2,6 +2,13 @@ using Unity.Entities;
 
 namespace Tyrsha.Eciton
 {
+    public enum EffectStackingPolicy : byte
+    {
+        None = 0,
+        RefreshDuration = 1,
+        StackAdditive = 2,
+    }
+
     /// <summary>활성화된 Effect의 런타임 핸들 스텁.</summary>
     public struct EffectHandle
     {
@@ -42,6 +49,12 @@ namespace Tyrsha.Eciton
         /// </summary>
         public bool RevertModifierOnEnd;
 
+        /// <summary>스태킹 정책(스텁).</summary>
+        public EffectStackingPolicy StackingPolicy;
+
+        /// <summary>최대 스택(0이면 1로 취급).</summary>
+        public int MaxStacks;
+
         /// <summary>단일 modifier 스텁(복수는 이후 확장).</summary>
         public AttributeModifier Modifier;
     }
@@ -76,6 +89,10 @@ namespace Tyrsha.Eciton
 
         /// <summary>만료 시 modifier 되돌리기 여부.</summary>
         public bool RevertModifierOnEnd;
+
+        public EffectStackingPolicy StackingPolicy;
+        public int MaxStacks;
+        public int StackCount;
     }
 
     /// <summary>
