@@ -92,7 +92,7 @@ namespace Tyrsha.Eciton
                 MaxStacks = 1,
             };
             var e0Mods = builder.Allocate(ref effects[0].Modifiers, 1);
-            e0Mods[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -30f };
+            e0Mods[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -30f, DamageType = DamageType.Fire };
             effects[1] = new EffectDefinition
             {
                 EffectId = CommonIds.Effect_BurnDot,
@@ -104,9 +104,10 @@ namespace Tyrsha.Eciton
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.RefreshDuration,
                 MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
             };
             var e1Mods = builder.Allocate(ref effects[1].Modifiers, 1);
-            e1Mods[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -4f };
+            e1Mods[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -4f, DamageType = DamageType.Fire };
             effects[2] = new EffectDefinition
             {
                 EffectId = CommonIds.Effect_HealInstant,
@@ -118,6 +119,7 @@ namespace Tyrsha.Eciton
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.None,
                 MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
             };
             var e2Mods = builder.Allocate(ref effects[2].Modifiers, 1);
             e2Mods[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = 25f };
@@ -132,6 +134,7 @@ namespace Tyrsha.Eciton
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.RefreshDuration,
                 MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
             };
             var e3Mods = builder.Allocate(ref effects[3].Modifiers, 1);
             e3Mods[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = 0f };
@@ -146,6 +149,7 @@ namespace Tyrsha.Eciton
                 RevertModifierOnEnd = true,
                 StackingPolicy = EffectStackingPolicy.RefreshDuration,
                 MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
             };
             var e4Mods = builder.Allocate(ref effects[4].Modifiers, 1);
             e4Mods[0] = new AttributeModifier { Attribute = AttributeId.MoveSpeed, Op = AttributeModOp.Multiply, Magnitude = 0.5f };
@@ -162,6 +166,7 @@ namespace Tyrsha.Eciton
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.RefreshDuration,
                 MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
             };
             builder.Allocate(ref effects[5].Modifiers, 0);
             effects[6] = new EffectDefinition
@@ -175,6 +180,7 @@ namespace Tyrsha.Eciton
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.RefreshDuration,
                 MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
             };
             builder.Allocate(ref effects[6].Modifiers, 0);
             effects[7] = new EffectDefinition
@@ -188,6 +194,7 @@ namespace Tyrsha.Eciton
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.RefreshDuration,
                 MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
             };
             builder.Allocate(ref effects[7].Modifiers, 0);
             effects[8] = new EffectDefinition
@@ -201,6 +208,7 @@ namespace Tyrsha.Eciton
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.RefreshDuration,
                 MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
             };
             builder.Allocate(ref effects[8].Modifiers, 0);
 

@@ -44,6 +44,9 @@ namespace Tyrsha.Eciton
         /// </summary>
         public GameplayTag GrantedTag;
 
+        /// <summary>대상이 이 태그를 가지고 있으면 적용을 막는다(면역 스텁).</summary>
+        public GameplayTag BlockedByTag;
+
         /// <summary>
         /// 지속형(비주기) 버프/디버프에서 만료 시 modifier를 되돌릴지 여부.
         /// Add는 -Magnitude, Multiply는 1/Magnitude로 역연산한다(Override는 스텁에서는 무시).
@@ -92,6 +95,7 @@ namespace Tyrsha.Eciton
 
         /// <summary>활성화된 동안 부여 중인 태그(유효할 때만 의미).</summary>
         public GameplayTag GrantedTag;
+        public GameplayTag BlockedByTag;
 
         /// <summary>만료 시 modifier 되돌리기 여부.</summary>
         public bool RevertModifierOnEnd;

@@ -30,6 +30,11 @@ namespace Tyrsha.Eciton
         public AttributeId Attribute;
         public AttributeModOp Op;
         public float Magnitude;
+
+        /// <summary>
+        /// 데미지 타입 스텁. Health에 음수 Add가 들어올 때만 의미가 있다.
+        /// </summary>
+        public DamageType DamageType;
     }
 
     /// <summary>

@@ -37,6 +37,9 @@ namespace Tyrsha.Eciton
                             IsPeriodic = def.IsPeriodic,
                             Period = def.Period,
                             GrantedTag = def.GrantedTag,
+                            BlockedByTag = def.BlockedByTag,
+                            // 스텁: DB에서 차단 태그를 EffectSpec로 내려보내기 위해 Modifier.DamageType은 그대로 두고,
+                            // 태그 면역은 EffectRequestSystem에서 ActiveEffect/Target의 태그를 확인하도록 확장한다.
                             RevertModifierOnEnd = def.RevertModifierOnEnd,
                             StackingPolicy = def.StackingPolicy,
                             MaxStacks = def.MaxStacks,

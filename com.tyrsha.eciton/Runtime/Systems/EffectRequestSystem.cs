@@ -22,6 +22,7 @@ namespace Tyrsha.Eciton
             int nextHandle = _nextHandle;
 
             Entities.ForEach((
+                in DynamicBuffer<GameplayTagElement> targetTags,
                 DynamicBuffer<ActiveEffect> activeEffects,
                 DynamicBuffer<ApplyEffectRequest> applyRequests,
                 DynamicBuffer<RemoveEffectRequest> removeRequests,
@@ -34,6 +35,10 @@ namespace Tyrsha.Eciton
                 for (int i = 0; i < applyRequests.Length; i++)
                 {
                     var spec = applyRequests[i].Spec;
+
+                    // 면역/차단 태그 체크
+                    if (spec.BlockedByTag.IsValid && HasTag(targetTags, spec.BlockedByTag.Value))
+                        continue;
 
                     // 비주기(즉시) 효과: 바로 modifier 적용.
                     if (!spec.IsPeriodic)
@@ -109,6 +114,7 @@ namespace Tyrsha.Eciton
                             // 스텁: 첫 틱은 Period 이후부터.
                             TimeToNextTick = spec.IsPeriodic ? spec.Period : 0f,
                             GrantedTag = spec.GrantedTag,
+                            BlockedByTag = spec.BlockedByTag,
                             RevertModifierOnEnd = spec.RevertModifierOnEnd,
                             StackingPolicy = spec.StackingPolicy,
                             MaxStacks = spec.MaxStacks,
@@ -178,6 +184,16 @@ namespace Tyrsha.Eciton
 
             if (spec.Modifier.Magnitude != 0f)
                 attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = spec.Modifier });
+        }
+
+        private static bool HasTag(DynamicBuffer<GameplayTagElement> tags, int tagValue)
+        {
+            for (int i = 0; i < tags.Length; i++)
+            {
+                if (tags[i].Tag.Value == tagValue)
+                    return true;
+            }
+            return false;
         }
     }
 }

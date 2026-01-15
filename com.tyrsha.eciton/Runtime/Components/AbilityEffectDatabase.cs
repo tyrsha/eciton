@@ -55,6 +55,9 @@ namespace Tyrsha.Eciton
         public EffectStackingPolicy StackingPolicy;
         public int MaxStacks;
 
+        /// <summary>이 태그를 대상이 가지고 있으면 적용을 막는다(면역/저항 스텁).</summary>
+        public GameplayTag BlockedByTag;
+
         public BlobArray<AttributeModifier> Modifiers;
     }
 
