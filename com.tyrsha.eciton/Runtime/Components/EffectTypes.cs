@@ -105,6 +105,18 @@ namespace Tyrsha.Eciton
     }
 
     /// <summary>
+    /// DB에 정의된 Effect를 ID로 적용하는 요청(데이터 드리븐 경로).
+    /// </summary>
+    [InternalBufferCapacity(4)]
+    public struct ApplyEffectByIdRequest : IBufferElementData
+    {
+        public int EffectId;
+        public int Level;
+        public Entity Source;
+        public Entity Target;
+    }
+
+    /// <summary>
     /// Effect 제거 요청 스텁.
     /// </summary>
     [InternalBufferCapacity(2)]
