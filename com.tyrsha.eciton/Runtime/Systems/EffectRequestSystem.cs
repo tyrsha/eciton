@@ -22,6 +22,7 @@ namespace Tyrsha.Eciton
             int nextHandle = _nextHandle;
 
             Entities.ForEach((
+                Entity entity,
                 in DynamicBuffer<GameplayTagElement> targetTags,
                 DynamicBuffer<ActiveEffect> activeEffects,
                 DynamicBuffer<ApplyEffectRequest> applyRequests,
@@ -29,7 +30,8 @@ namespace Tyrsha.Eciton
                 DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests,
                 DynamicBuffer<AddGameplayTagRequest> addTagRequests,
                 DynamicBuffer<RemoveGameplayTagRequest> removeTagRequests,
-                DynamicBuffer<RemoveEffectsWithTagRequest> removeEffectsByTag) =>
+                DynamicBuffer<RemoveEffectsWithTagRequest> removeEffectsByTag,
+                DynamicBuffer<PendingGameplayEvent> events) =>
             {
                 // Apply
                 for (int i = 0; i < applyRequests.Length; i++)
@@ -49,6 +51,19 @@ namespace Tyrsha.Eciton
                     // 태그 부여(즉시/지속 상관없이 적용 시점에 1회 추가).
                     if (spec.GrantedTag.IsValid)
                         addTagRequests.Add(new AddGameplayTagRequest { Tag = spec.GrantedTag });
+
+                    // 이벤트: effect applied (스텁)
+                    events.Add(new PendingGameplayEvent
+                    {
+                        Event = new GameplayEvent
+                        {
+                            Type = GameplayEventType.EffectApplied,
+                            Source = spec.Source,
+                            Target = entity,
+                            Id = spec.EffectId,
+                            Magnitude = 0f
+                        }
+                    });
 
                     // 지속/주기 효과는 ActiveEffect로 관리한다.
                     // (Duration<=0 이면서 비주기면 ActiveEffect를 만들지 않는다.)
@@ -140,7 +155,20 @@ namespace Tyrsha.Eciton
                             var tag = activeEffects[e].GrantedTag;
                             if (tag.IsValid)
                                 removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = tag });
+                            int removedEffectId = activeEffects[e].EffectId;
                             activeEffects.RemoveAt(e);
+
+                            events.Add(new PendingGameplayEvent
+                            {
+                                Event = new GameplayEvent
+                                {
+                                    Type = GameplayEventType.EffectRemoved,
+                                    Source = Entity.Null,
+                                    Target = entity,
+                                    Id = removedEffectId,
+                                    Magnitude = 0f
+                                }
+                            });
                         }
                     }
                 }

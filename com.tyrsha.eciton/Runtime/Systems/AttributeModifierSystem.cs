@@ -12,24 +12,26 @@ namespace Tyrsha.Eciton
         protected override void OnUpdate()
         {
             // 저항 컴포넌트가 있는 경우
-            Entities.ForEach((ref AttributeData attributes, ref DamageResistanceData resist, DynamicBuffer<ApplyAttributeModifierRequest> requests) =>
+            Entities.ForEach((Entity e, ref AttributeData attributes, ref DamageResistanceData resist, DynamicBuffer<ApplyAttributeModifierRequest> requests, DynamicBuffer<PendingGameplayEvent> events) =>
             {
                 for (int i = 0; i < requests.Length; i++)
                 {
                     var mod = requests[i].Modifier;
                     ApplyModifier(ref attributes, ref resist, mod);
+                    EmitEvent(e, events, mod);
                 }
 
                 requests.Clear();
             }).ScheduleParallel();
 
             // 저항 컴포넌트가 없는 경우
-            Entities.WithNone<DamageResistanceData>().ForEach((ref AttributeData attributes, DynamicBuffer<ApplyAttributeModifierRequest> requests) =>
+            Entities.WithNone<DamageResistanceData>().ForEach((Entity e, ref AttributeData attributes, DynamicBuffer<ApplyAttributeModifierRequest> requests, DynamicBuffer<PendingGameplayEvent> events) =>
             {
                 for (int i = 0; i < requests.Length; i++)
                 {
                     var mod = requests[i].Modifier;
                     ApplyModifier(ref attributes, mod);
+                    EmitEvent(e, events, mod);
                 }
 
                 requests.Clear();
@@ -161,6 +163,41 @@ namespace Tyrsha.Eciton
                 case AttributeId.MoveSpeed:
                     data.MoveSpeed = ApplyOp(data.MoveSpeed, mod.Op, mod.Magnitude);
                     break;
+            }
+        }
+
+        private static void EmitEvent(Entity entity, DynamicBuffer<PendingGameplayEvent> events, AttributeModifier mod)
+        {
+            if (mod.Attribute != AttributeId.Health || mod.Op != AttributeModOp.Add || mod.Magnitude == 0f)
+                return;
+
+            if (mod.Magnitude < 0f)
+            {
+                events.Add(new PendingGameplayEvent
+                {
+                    Event = new GameplayEvent
+                    {
+                        Type = GameplayEventType.DamageApplied,
+                        Source = Entity.Null,
+                        Target = entity,
+                        Id = (int)mod.DamageType,
+                        Magnitude = -mod.Magnitude
+                    }
+                });
+            }
+            else
+            {
+                events.Add(new PendingGameplayEvent
+                {
+                    Event = new GameplayEvent
+                    {
+                        Type = GameplayEventType.HealApplied,
+                        Source = Entity.Null,
+                        Target = entity,
+                        Id = 0,
+                        Magnitude = mod.Magnitude
+                    }
+                });
             }
         }
     }

@@ -57,5 +57,14 @@ namespace Tyrsha.Eciton
 
     /// <summary>이벤트 큐 싱글톤 마커.</summary>
     public struct GameplayEventQueueSingleton : IComponentData { }
+
+    /// <summary>
+    /// 각 엔티티가 로컬로 이벤트를 쌓는 버퍼(싱글톤 큐로 디스패치되기 전).
+    /// </summary>
+    [InternalBufferCapacity(8)]
+    public struct PendingGameplayEvent : IBufferElementData
+    {
+        public GameplayEvent Event;
+    }
 }
 

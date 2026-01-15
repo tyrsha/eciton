@@ -60,6 +60,7 @@ namespace Tyrsha.Eciton
             if (!em.HasBuffer<ActiveEffect>(entity)) em.AddBuffer<ActiveEffect>(entity);
 
             if (!em.HasBuffer<ApplyAttributeModifierRequest>(entity)) em.AddBuffer<ApplyAttributeModifierRequest>(entity);
+            if (!em.HasBuffer<PendingGameplayEvent>(entity)) em.AddBuffer<PendingGameplayEvent>(entity);
 
             if (!em.HasBuffer<GameplayTagElement>(entity)) em.AddBuffer<GameplayTagElement>(entity);
             if (!em.HasBuffer<AddGameplayTagRequest>(entity)) em.AddBuffer<AddGameplayTagRequest>(entity);
