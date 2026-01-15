@@ -1,0 +1,62 @@
+using Unity.Entities;
+
+namespace Tyrsha.Eciton
+{
+    /// <summary>
+    /// Fireball 능력 활성화 요청을 처리해 투사체를 스폰하는 예제 시스템.
+    /// </summary>
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateBefore(typeof(AbilityRequestSystem))]
+    public class FireballAbilitySystem : SystemBase
+    {
+        protected override void OnUpdate()
+        {
+            var em = EntityManager;
+
+            // 스텁 예제이므로 main thread에서 처리(간단/명확성 우선).
+            Entities.WithoutBurst().ForEach((
+                Entity entity,
+                in AbilitySystemComponent asc,
+                DynamicBuffer<GrantedAbility> granted,
+                DynamicBuffer<TryActivateAbilityRequest> tryActivate) =>
+            {
+                _ = asc;
+
+                for (int i = tryActivate.Length - 1; i >= 0; i--)
+                {
+                    var request = tryActivate[i];
+
+                    int abilityId = 0;
+                    for (int g = 0; g < granted.Length; g++)
+                    {
+                        if (granted[g].Handle.Value == request.Handle.Value)
+                        {
+                            abilityId = granted[g].AbilityId;
+                            break;
+                        }
+                    }
+
+                    if (abilityId != ExampleIds.Ability_Fireball)
+                        continue;
+
+                    // Fireball 투사체 스폰
+                    var projectile = em.CreateEntity();
+                    em.AddComponentData(projectile, new FireballProjectile
+                    {
+                        Source = entity,
+                        Target = request.Target,
+                        RemainingFlightTime = 0.35f,
+                        ImpactDamage = 30f,
+                        BurnDuration = 5f,
+                        BurnDamagePerSecond = 4f,
+                        BurnTickPeriod = 1f,
+                    });
+
+                    // 요청 소비
+                    tryActivate.RemoveAt(i);
+                }
+            }).Run();
+        }
+    }
+}
+

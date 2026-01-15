@@ -32,19 +32,36 @@ namespace Tyrsha.Eciton
                 {
                     var spec = applyRequests[i].Spec;
 
-                    var handle = new EffectHandle { Value = nextHandle++ };
-                    activeEffects.Add(new ActiveEffect
+                    // 비주기(즉시) 효과: 바로 modifier 적용.
+                    if (!spec.IsPeriodic)
                     {
-                        Handle = handle,
-                        EffectId = spec.EffectId,
-                        Level = spec.Level,
-                        Source = spec.Source,
-                        RemainingTime = spec.IsPermanent ? 0f : spec.Duration,
-                        IsPermanent = spec.IsPermanent,
-                    });
+                        attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = spec.Modifier });
+                    }
 
-                    // 스텁: 즉시 Attribute 변경 요청 1개를 발생시킨다(지속형/주기형 등은 이후 확장).
-                    attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = spec.Modifier });
+                    // 지속/주기 효과는 ActiveEffect로 관리한다.
+                    // (Duration<=0 이면서 비주기면 ActiveEffect를 만들지 않는다.)
+                    bool needsActive =
+                        spec.IsPeriodic ||
+                        (!spec.IsPermanent && spec.Duration > 0f);
+
+                    if (needsActive)
+                    {
+                        var handle = new EffectHandle { Value = nextHandle++ };
+                        activeEffects.Add(new ActiveEffect
+                        {
+                            Handle = handle,
+                            EffectId = spec.EffectId,
+                            Level = spec.Level,
+                            Source = spec.Source,
+                            RemainingTime = spec.IsPermanent ? 0f : spec.Duration,
+                            IsPermanent = spec.IsPermanent,
+                            Modifier = spec.Modifier,
+                            IsPeriodic = spec.IsPeriodic,
+                            Period = spec.Period,
+                            // 스텁: 첫 틱은 Period 이후부터.
+                            TimeToNextTick = spec.IsPeriodic ? spec.Period : 0f,
+                        });
+                    }
                 }
 
                 // Remove

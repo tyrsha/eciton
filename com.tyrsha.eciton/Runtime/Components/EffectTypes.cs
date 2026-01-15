@@ -24,6 +24,12 @@ namespace Tyrsha.Eciton
         public float Duration;
         public bool IsPermanent;
 
+        /// <summary>주기(DoT/HoT 등) 여부.</summary>
+        public bool IsPeriodic;
+
+        /// <summary>주기 효과의 틱 간격(초). IsPeriodic=true일 때 사용.</summary>
+        public float Period;
+
         /// <summary>단일 modifier 스텁(복수는 이후 확장).</summary>
         public AttributeModifier Modifier;
     }
@@ -40,6 +46,18 @@ namespace Tyrsha.Eciton
         public Entity Source;
         public float RemainingTime;
         public bool IsPermanent;
+
+        /// <summary>스텁: 단일 modifier.</summary>
+        public AttributeModifier Modifier;
+
+        /// <summary>주기 효과 여부.</summary>
+        public bool IsPeriodic;
+
+        /// <summary>틱 간격(초). IsPeriodic=true일 때 사용.</summary>
+        public float Period;
+
+        /// <summary>다음 틱까지 남은 시간(초).</summary>
+        public float TimeToNextTick;
     }
 
     /// <summary>
