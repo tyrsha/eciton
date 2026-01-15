@@ -33,6 +33,10 @@ namespace Tyrsha.Eciton
         public int PrimaryEffectId;
         public int SecondaryEffectId;
         public GameplayTag CleanseTag;
+
+        // Data-driven gate via effects/tags (optional)
+        public int CooldownEffectId;
+        public GameplayTag CooldownTag;
     }
 
     public struct EffectDefinition

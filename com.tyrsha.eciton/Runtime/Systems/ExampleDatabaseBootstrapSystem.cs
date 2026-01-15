@@ -33,6 +33,8 @@ namespace Tyrsha.Eciton
                 PrimaryEffectId = CommonIds.Effect_InstantDamage,
                 SecondaryEffectId = CommonIds.Effect_BurnDot,
                 CleanseTag = GameplayTag.Invalid,
+                CooldownEffectId = CommonIds.Effect_Cooldown_Fireball,
+                CooldownTag = new GameplayTag { Value = CommonIds.Tag_Cooldown_Fireball },
                 TagRequirements = default
             };
             abilities[1] = new AbilityDefinition
@@ -44,6 +46,8 @@ namespace Tyrsha.Eciton
                 PrimaryEffectId = CommonIds.Effect_HealInstant,
                 SecondaryEffectId = 0,
                 CleanseTag = GameplayTag.Invalid,
+                CooldownEffectId = CommonIds.Effect_Cooldown_Heal,
+                CooldownTag = new GameplayTag { Value = CommonIds.Tag_Cooldown_Heal },
                 TagRequirements = default
             };
             abilities[2] = new AbilityDefinition
@@ -55,6 +59,8 @@ namespace Tyrsha.Eciton
                 PrimaryEffectId = 0,
                 SecondaryEffectId = 0,
                 CleanseTag = new GameplayTag { Value = CommonIds.Tag_Burning },
+                CooldownEffectId = CommonIds.Effect_Cooldown_Cleanse,
+                CooldownTag = new GameplayTag { Value = CommonIds.Tag_Cooldown_Cleanse },
                 TagRequirements = default
             };
             abilities[3] = new AbilityDefinition
@@ -67,10 +73,12 @@ namespace Tyrsha.Eciton
                 PrimaryEffectId = CommonIds.Effect_Stun,
                 SecondaryEffectId = 0,
                 CleanseTag = GameplayTag.Invalid,
+                CooldownEffectId = CommonIds.Effect_Cooldown_StunBolt,
+                CooldownTag = new GameplayTag { Value = CommonIds.Tag_Cooldown_StunBolt },
                 TagRequirements = default
             };
 
-            var effects = builder.Allocate(ref root.Effects, 5);
+            var effects = builder.Allocate(ref root.Effects, 9);
             effects[0] = new EffectDefinition
             {
                 EffectId = CommonIds.Effect_InstantDamage,
@@ -141,6 +149,60 @@ namespace Tyrsha.Eciton
             };
             var e4Mods = builder.Allocate(ref effects[4].Modifiers, 1);
             e4Mods[0] = new AttributeModifier { Attribute = AttributeId.MoveSpeed, Op = AttributeModOp.Multiply, Magnitude = 0.5f };
+
+            // Cooldown effects (no modifiers, only tag+duration)
+            effects[5] = new EffectDefinition
+            {
+                EffectId = CommonIds.Effect_Cooldown_Fireball,
+                Duration = 3f,
+                IsPermanent = false,
+                IsPeriodic = false,
+                Period = 0f,
+                GrantedTag = new GameplayTag { Value = CommonIds.Tag_Cooldown_Fireball },
+                RevertModifierOnEnd = false,
+                StackingPolicy = EffectStackingPolicy.RefreshDuration,
+                MaxStacks = 1,
+            };
+            builder.Allocate(ref effects[5].Modifiers, 0);
+            effects[6] = new EffectDefinition
+            {
+                EffectId = CommonIds.Effect_Cooldown_Heal,
+                Duration = 2f,
+                IsPermanent = false,
+                IsPeriodic = false,
+                Period = 0f,
+                GrantedTag = new GameplayTag { Value = CommonIds.Tag_Cooldown_Heal },
+                RevertModifierOnEnd = false,
+                StackingPolicy = EffectStackingPolicy.RefreshDuration,
+                MaxStacks = 1,
+            };
+            builder.Allocate(ref effects[6].Modifiers, 0);
+            effects[7] = new EffectDefinition
+            {
+                EffectId = CommonIds.Effect_Cooldown_Cleanse,
+                Duration = 5f,
+                IsPermanent = false,
+                IsPeriodic = false,
+                Period = 0f,
+                GrantedTag = new GameplayTag { Value = CommonIds.Tag_Cooldown_Cleanse },
+                RevertModifierOnEnd = false,
+                StackingPolicy = EffectStackingPolicy.RefreshDuration,
+                MaxStacks = 1,
+            };
+            builder.Allocate(ref effects[7].Modifiers, 0);
+            effects[8] = new EffectDefinition
+            {
+                EffectId = CommonIds.Effect_Cooldown_StunBolt,
+                Duration = 4f,
+                IsPermanent = false,
+                IsPeriodic = false,
+                Period = 0f,
+                GrantedTag = new GameplayTag { Value = CommonIds.Tag_Cooldown_StunBolt },
+                RevertModifierOnEnd = false,
+                StackingPolicy = EffectStackingPolicy.RefreshDuration,
+                MaxStacks = 1,
+            };
+            builder.Allocate(ref effects[8].Modifiers, 0);
 
             var blobRef = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
             builder.Dispose();

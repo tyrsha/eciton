@@ -43,7 +43,9 @@ namespace Tyrsha.Eciton
                         CooldownDuration = def.CooldownDuration,
                         CooldownRemaining = 0f,
                         ManaCost = def.ManaCost,
-                        TagRequirements = def.TagRequirements
+                        TagRequirements = def.TagRequirements,
+                        CooldownEffectId = def.CooldownEffectId,
+                        CooldownTag = def.CooldownTag,
                     });
                 }
 

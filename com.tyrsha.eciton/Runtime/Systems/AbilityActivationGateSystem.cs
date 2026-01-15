@@ -16,10 +16,12 @@ namespace Tyrsha.Eciton
             float dt = Time.DeltaTime;
 
             Entities.ForEach((
+                Entity e,
                 ref AttributeData attributes,
                 in DynamicBuffer<GameplayTagElement> tags,
                 DynamicBuffer<GrantedAbility> granted,
-                DynamicBuffer<TryActivateAbilityRequest> tryActivate) =>
+                DynamicBuffer<TryActivateAbilityRequest> tryActivate,
+                DynamicBuffer<ApplyEffectByIdRequest> applyEffectById) =>
             {
                 // 쿨다운 감소
                 for (int g = 0; g < granted.Length; g++)
@@ -56,6 +58,13 @@ namespace Tyrsha.Eciton
 
                     var ability = granted[idx];
 
+                    // 쿨다운 태그 방식: 태그가 있으면 실패
+                    if (ability.CooldownTag.IsValid && HasTag(tags, ability.CooldownTag.Value))
+                    {
+                        tryActivate.RemoveAt(i);
+                        continue;
+                    }
+
                     // 태그 요구조건(단일 Required/Blocked 스텁)
                     if (ability.TagRequirements.Required.IsValid && !HasTag(tags, ability.TagRequirements.Required.Value))
                     {
@@ -89,6 +98,18 @@ namespace Tyrsha.Eciton
                     {
                         ability.CooldownRemaining = ability.CooldownDuration;
                         granted[idx] = ability;
+                    }
+
+                    // 쿨다운을 Effect로 표현(권장): 성공 시 self에 쿨다운 effect 적용
+                    if (ability.CooldownEffectId != 0)
+                    {
+                        applyEffectById.Add(new ApplyEffectByIdRequest
+                        {
+                            EffectId = ability.CooldownEffectId,
+                            Level = 1,
+                            Source = e,
+                            Target = e
+                        });
                     }
                 }
             }).ScheduleParallel();

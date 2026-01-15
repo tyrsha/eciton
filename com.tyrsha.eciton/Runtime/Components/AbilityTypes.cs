@@ -45,6 +45,9 @@ namespace Tyrsha.Eciton
         public float ManaCost;
 
         public TagQuery TagRequirements;
+
+        public int CooldownEffectId;
+        public GameplayTag CooldownTag;
     }
 
     /// <summary>

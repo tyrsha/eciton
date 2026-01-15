@@ -10,6 +10,10 @@ namespace Tyrsha.Eciton
         public const int Tag_Burning = 1001;
         public const int Tag_Stunned = 1002;
         public const int Tag_Slowed = 1003;
+        public const int Tag_Cooldown_Fireball = 1101;
+        public const int Tag_Cooldown_Heal = 1102;
+        public const int Tag_Cooldown_Cleanse = 1103;
+        public const int Tag_Cooldown_StunBolt = 1104;
 
         // Abilities
         public const int Ability_Fireball = 1;
@@ -25,6 +29,11 @@ namespace Tyrsha.Eciton
         public const int Effect_Slow = 5;
         public const int Effect_Shield = 6;
         public const int Effect_RegenHot = 7;
+
+        public const int Effect_Cooldown_Fireball = 101;
+        public const int Effect_Cooldown_Heal = 102;
+        public const int Effect_Cooldown_Cleanse = 103;
+        public const int Effect_Cooldown_StunBolt = 104;
     }
 }
 
