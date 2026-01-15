@@ -6,6 +6,7 @@ namespace Tyrsha.Eciton
     /// ApplyAttributeModifierRequest를 AttributeData에 반영하는 최소 스텁 시스템.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateAfter(typeof(ActiveEffectSystem))]
     public class AttributeModifierSystem : SystemBase
     {
         protected override void OnUpdate()

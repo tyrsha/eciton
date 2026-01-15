@@ -8,6 +8,7 @@ namespace Tyrsha.Eciton
     /// Actor2 즉시 데미지 + 화상 DoT 적용.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateBefore(typeof(FireballAbilitySystem))]
     public class FireballScenarioBootstrapSystem : SystemBase
     {
         private bool _initialized;

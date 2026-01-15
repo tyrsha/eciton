@@ -6,6 +6,7 @@ namespace Tyrsha.Eciton
     /// Fireball 투사체의 비행/충돌(시간 기반 스텁)과 폭발 시 효과 적용을 처리.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateBefore(typeof(EffectRequestSystem))]
     public class FireballProjectileSystem : SystemBase
     {
         protected override void OnUpdate()
