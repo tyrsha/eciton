@@ -7,6 +7,7 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(AbilityRequestSystem))]
+    [UpdateAfter(typeof(AbilityExecutionSystem))]
     public class CommonAbilitySystems : SystemBase
     {
         protected override void OnUpdate()

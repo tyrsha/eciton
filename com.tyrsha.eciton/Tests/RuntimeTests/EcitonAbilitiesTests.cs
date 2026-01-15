@@ -13,6 +13,7 @@ namespace Tyrsha.Eciton.Tests
         private FireballAbilitySystem _fireballAbility;
         private AbilityGrantSystem _grant;
         private EffectFromDatabaseSystem _effectFromDb;
+        private AbilityExecutionSystem _execute;
 
         [SetUp]
         public void SetUp()
@@ -24,6 +25,7 @@ namespace Tyrsha.Eciton.Tests
 
             _grant = _world.CreateSystemManaged<AbilityGrantSystem>();
             _effectFromDb = _world.CreateSystemManaged<EffectFromDatabaseSystem>();
+            _execute = _world.CreateSystemManaged<AbilityExecutionSystem>();
             _commonAbilities = _world.CreateSystemManaged<CommonAbilitySystems>();
             _fireballAbility = _world.CreateSystemManaged<FireballAbilitySystem>();
         }
@@ -63,13 +65,13 @@ namespace Tyrsha.Eciton.Tests
                 Target = actor2
             });
 
-            _fireballAbility.Update();
+            _execute.Update();
 
             // 요청은 소비되고, 투사체는 생성되지 않아야 함
             Assert.AreEqual(0, _em.GetBuffer<TryActivateAbilityRequest>(actor1).Length);
 
             int projectileCount = 0;
-            using (var q = _em.CreateEntityQuery(typeof(FireballProjectile)))
+            using (var q = _em.CreateEntityQuery(typeof(AbilityProjectile)))
                 projectileCount = q.CalculateEntityCount();
             Assert.AreEqual(0, projectileCount);
         }
@@ -95,6 +97,7 @@ namespace Tyrsha.Eciton.Tests
             });
 
             _commonAbilities.Update();
+            _execute.Update();
 
             // Heal은 ApplyEffectRequest가 target(=self)에 쌓인다.
             Assert.AreEqual(1, _em.GetBuffer<ApplyEffectByIdRequest>(actor).Length);
@@ -279,7 +282,7 @@ namespace Tyrsha.Eciton.Tests
             _em.GetBuffer<PressAbilityInputRequest>(actor).Add(new PressAbilityInputRequest { Slot = AbilityInputSlot.Slot1, TargetData = default });
             input.Update();
             gate.Update();
-            _commonAbilities.Update();
+            _execute.Update();
             _effectFromDb.Update();
             effectReq.Update();
             tagSys.Update();
