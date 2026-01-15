@@ -1,3 +1,4 @@
+using Tyrsha.Eciton;
 using UnityEngine;
 
 namespace Tyrsha.Eciton.Authoring
@@ -9,8 +10,15 @@ namespace Tyrsha.Eciton.Authoring
     public class AbilityDefinitionAsset : ScriptableObject
     {
         public int AbilityId;
+        public AbilityExecutionType ExecutionType;
         public float CooldownDuration;
         public float ManaCost;
+
+        // Execution payload (스텁)
+        public float ProjectileFlightTime;
+        public int PrimaryEffectId;
+        public int SecondaryEffectId;
+        public int CleanseTagValue;
     }
 }
 
