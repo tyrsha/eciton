@@ -49,10 +49,11 @@ namespace Tyrsha.Eciton
 
                     // Fireball 투사체 스폰
                     var projectile = em.CreateEntity();
+                    var target = request.Target != Entity.Null ? request.Target : request.TargetData.Target;
                     em.AddComponentData(projectile, new FireballProjectile
                     {
                         Source = entity,
-                        Target = request.Target,
+                        Target = target,
                         RemainingFlightTime = 0.35f,
                         ImpactDamage = 30f,
                         BurnDuration = 5f,

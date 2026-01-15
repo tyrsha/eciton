@@ -6,6 +6,7 @@ namespace Tyrsha.Eciton
     public struct AbilityHandle
     {
         public int Value;
+        public int Version;
 
         public static AbilityHandle Invalid => new AbilityHandle { Value = 0 };
         public bool IsValid => Value != 0;
@@ -21,6 +22,11 @@ namespace Tyrsha.Eciton
         public int AbilityId;
         public int Level;
         public Entity Source;
+
+        public float CooldownDuration;
+        public float ManaCost;
+
+        public TagQuery TagRequirements;
     }
 
     /// <summary>
@@ -33,6 +39,12 @@ namespace Tyrsha.Eciton
         public int AbilityId;
         public int Level;
         public Entity Source;
+
+        public float CooldownDuration;
+        public float CooldownRemaining;
+        public float ManaCost;
+
+        public TagQuery TagRequirements;
     }
 
     /// <summary>
@@ -43,6 +55,8 @@ namespace Tyrsha.Eciton
     {
         public AbilityHandle Handle;
         public Entity Target;
+
+        public TargetData TargetData;
     }
 
     /// <summary>

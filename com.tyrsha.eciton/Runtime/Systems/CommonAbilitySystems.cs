@@ -47,6 +47,8 @@ namespace Tyrsha.Eciton
                         continue;
 
                     var target = request.Target != Entity.Null ? request.Target : entity;
+                    if (request.TargetData.Target != Entity.Null)
+                        target = request.TargetData.Target;
 
                     switch (abilityId)
                     {

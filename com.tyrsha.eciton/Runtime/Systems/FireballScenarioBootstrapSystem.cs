@@ -45,7 +45,7 @@ namespace Tyrsha.Eciton
 
             // Actor1이 Actor2를 타겟으로 Fireball 활성화 요청
             var tryActivate = em.GetBuffer<TryActivateAbilityRequest>(actor1);
-            tryActivate.Add(new TryActivateAbilityRequest { Handle = fireballHandle, Target = actor2 });
+            tryActivate.Add(new TryActivateAbilityRequest { Handle = fireballHandle, Target = actor2, TargetData = new TargetData { Target = actor2 } });
         }
 
         private static void EnsureAscBuffers(EntityManager em, Entity entity)
