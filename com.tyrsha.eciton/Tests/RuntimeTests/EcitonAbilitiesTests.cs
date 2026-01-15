@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Unity.Collections;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton.Tests
@@ -186,6 +187,7 @@ namespace Tyrsha.Eciton.Tests
             _em.AddBuffer<RemoveEffectsWithTagRequest>(e);
             _em.AddBuffer<ActiveEffect>(e);
             _em.AddBuffer<ApplyAttributeModifierRequest>(e);
+            _em.AddBuffer<PendingGameplayEvent>(e);
 
             _em.AddBuffer<GameplayTagElement>(e);
             _em.AddBuffer<AddGameplayTagRequest>(e);
@@ -209,10 +211,12 @@ namespace Tyrsha.Eciton.Tests
                 SecondaryEffectId = 0,
                 CleanseTag = GameplayTag.Invalid,
                 ProjectileFlightTime = 0f,
-                TagRequirements = default
+                TagRequirements = default,
+                CooldownEffectId = 2001,
+                CooldownTag = new GameplayTag { Value = 3001 },
             };
 
-            var effects = builder.Allocate(ref root.Effects, 1);
+            var effects = builder.Allocate(ref root.Effects, 2);
             effects[0] = new EffectDefinition
             {
                 EffectId = CommonIds.Effect_HealInstant,
@@ -224,14 +228,79 @@ namespace Tyrsha.Eciton.Tests
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.None,
                 MaxStacks = 1,
-                Modifier = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = 25f }
+                BlockedByTag = GameplayTag.Invalid,
             };
+            var m0 = builder.Allocate(ref effects[0].Modifiers, 1);
+            m0[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = 25f };
+
+            // Heal cooldown effect: duration 2s, grants cooldown tag, no modifiers
+            effects[1] = new EffectDefinition
+            {
+                EffectId = 2001,
+                Duration = 2f,
+                IsPermanent = false,
+                IsPeriodic = false,
+                Period = 0f,
+                GrantedTag = new GameplayTag { Value = 3001 },
+                RevertModifierOnEnd = false,
+                StackingPolicy = EffectStackingPolicy.RefreshDuration,
+                MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
+            };
+            builder.Allocate(ref effects[1].Modifiers, 0);
 
             var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
             builder.Dispose();
 
             var dbEntity = _em.CreateEntity();
             _em.AddComponentData(dbEntity, new AbilityEffectDatabase { Blob = blob });
+        }
+
+        [Test]
+        public void Ability_input_binding_and_cooldown_effect_tag_blocks_second_activation()
+        {
+            var input = _world.CreateSystemManaged<AbilityInputSystem>();
+            var gate = _world.CreateSystemManaged<AbilityActivationGateSystem>();
+            var effectReq = _world.CreateSystemManaged<EffectRequestSystem>();
+            var tagSys = _world.CreateSystemManaged<GameplayTagSystem>();
+
+            var actor = CreateAscActor(health: 100f);
+
+            // Heal 부여(GrantAbilityRequest -> GrantedAbility 생성)
+            _em.GetBuffer<GrantAbilityRequest>(actor).Add(new GrantAbilityRequest { AbilityId = CommonIds.Ability_Heal, Level = 1, Source = actor });
+            _grant.Update();
+            var handle = _em.GetBuffer<GrantedAbility>(actor)[0].Handle;
+
+            // 슬롯 바인딩
+            _em.AddBuffer<AbilityInputBinding>(actor).Add(new AbilityInputBinding { Slot = AbilityInputSlot.Slot1, Handle = handle });
+            _em.AddBuffer<PressAbilityInputRequest>(actor);
+
+            // 1회 입력 -> 활성화 성공 -> 쿨다운 effect 적용 -> 쿨다운 태그 생김
+            _em.GetBuffer<PressAbilityInputRequest>(actor).Add(new PressAbilityInputRequest { Slot = AbilityInputSlot.Slot1, TargetData = default });
+            input.Update();
+            gate.Update();
+            _commonAbilities.Update();
+            _effectFromDb.Update();
+            effectReq.Update();
+            tagSys.Update();
+
+            Assert.IsTrue(HasTag(actor, 3001));
+
+            // 2회 입력 -> 게이트에서 쿨다운 태그로 차단되어 TryActivate가 제거되어야 함
+            _em.GetBuffer<PressAbilityInputRequest>(actor).Add(new PressAbilityInputRequest { Slot = AbilityInputSlot.Slot1, TargetData = default });
+            input.Update();
+            gate.Update();
+
+            Assert.AreEqual(0, _em.GetBuffer<TryActivateAbilityRequest>(actor).Length);
+        }
+
+        private bool HasTag(Entity e, int tagValue)
+        {
+            var tags = _em.GetBuffer<GameplayTagElement>(e);
+            for (int i = 0; i < tags.Length; i++)
+                if (tags[i].Tag.Value == tagValue)
+                    return true;
+            return false;
         }
     }
 }

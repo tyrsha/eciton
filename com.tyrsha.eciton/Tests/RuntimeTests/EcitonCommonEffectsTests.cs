@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Unity.Collections;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton.Tests
@@ -196,6 +197,7 @@ namespace Tyrsha.Eciton.Tests
             _em.AddBuffer<RemoveEffectsWithTagRequest>(e);
             _em.AddBuffer<ActiveEffect>(e);
             _em.AddBuffer<ApplyAttributeModifierRequest>(e);
+            _em.AddBuffer<PendingGameplayEvent>(e);
 
             _em.AddBuffer<GameplayTagElement>(e);
             _em.AddBuffer<AddGameplayTagRequest>(e);
@@ -233,7 +235,7 @@ namespace Tyrsha.Eciton.Tests
 
             builder.Allocate(ref root.Abilities, 0);
 
-            var effects = builder.Allocate(ref root.Effects, 3);
+            var effects = builder.Allocate(ref root.Effects, 4);
             effects[0] = new EffectDefinition
             {
                 EffectId = CommonIds.Effect_InstantDamage,
@@ -245,8 +247,10 @@ namespace Tyrsha.Eciton.Tests
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.None,
                 MaxStacks = 1,
-                Modifier = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -30f }
+                BlockedByTag = GameplayTag.Invalid,
             };
+            var m0 = builder.Allocate(ref effects[0].Modifiers, 1);
+            m0[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -30f, DamageType = DamageType.Fire };
             effects[1] = new EffectDefinition
             {
                 EffectId = CommonIds.Effect_BurnDot,
@@ -258,8 +262,10 @@ namespace Tyrsha.Eciton.Tests
                 RevertModifierOnEnd = false,
                 StackingPolicy = EffectStackingPolicy.RefreshDuration,
                 MaxStacks = 1,
-                Modifier = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -4f }
+                BlockedByTag = GameplayTag.Invalid,
             };
+            var m1 = builder.Allocate(ref effects[1].Modifiers, 1);
+            m1[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -4f, DamageType = DamageType.Fire };
             effects[2] = new EffectDefinition
             {
                 EffectId = CommonIds.Effect_Slow,
@@ -271,14 +277,53 @@ namespace Tyrsha.Eciton.Tests
                 RevertModifierOnEnd = true,
                 StackingPolicy = EffectStackingPolicy.RefreshDuration,
                 MaxStacks = 1,
-                Modifier = new AttributeModifier { Attribute = AttributeId.MoveSpeed, Op = AttributeModOp.Multiply, Magnitude = 0.5f }
+                BlockedByTag = GameplayTag.Invalid,
             };
+            var m2 = builder.Allocate(ref effects[2].Modifiers, 1);
+            m2[0] = new AttributeModifier { Attribute = AttributeId.MoveSpeed, Op = AttributeModOp.Multiply, Magnitude = 0.5f };
+
+            // 다중 modifier 테스트용 effect: Health -10, Mana -5
+            effects[3] = new EffectDefinition
+            {
+                EffectId = 999,
+                Duration = 0f,
+                IsPermanent = true,
+                IsPeriodic = false,
+                Period = 0f,
+                GrantedTag = GameplayTag.Invalid,
+                RevertModifierOnEnd = false,
+                StackingPolicy = EffectStackingPolicy.None,
+                MaxStacks = 1,
+                BlockedByTag = GameplayTag.Invalid,
+            };
+            var m3 = builder.Allocate(ref effects[3].Modifiers, 2);
+            m3[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -10f, DamageType = DamageType.Fire };
+            m3[1] = new AttributeModifier { Attribute = AttributeId.Mana, Op = AttributeModOp.Add, Magnitude = -5f };
 
             var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
             builder.Dispose();
 
             var dbEntity = _em.CreateEntity();
             _em.AddComponentData(dbEntity, new AbilityEffectDatabase { Blob = blob });
+        }
+
+        [Test]
+        public void Multi_modifier_effect_applies_all_modifiers()
+        {
+            var target = CreateTarget(health: 100f, shield: 0f);
+
+            _em.GetBuffer<ApplyEffectByIdRequest>(target).Add(new ApplyEffectByIdRequest
+            {
+                EffectId = 999,
+                Level = 1,
+                Source = target,
+                Target = target
+            });
+
+            Tick(dt: 0f);
+            var attrs = _em.GetComponentData<AttributeData>(target);
+            Assert.AreEqual(90f, attrs.Health, 0.0001f);
+            Assert.AreEqual(-5f, attrs.Mana, 0.0001f);
         }
 
         private void TrySetWorldTime(float dt)
