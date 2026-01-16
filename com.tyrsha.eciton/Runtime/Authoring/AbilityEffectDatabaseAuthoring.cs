@@ -8,6 +8,7 @@ namespace Tyrsha.Eciton.Authoring
     /// </summary>
     public class AbilityEffectDatabaseAuthoring : MonoBehaviour
     {
+        public AbilityEffectDatabaseAsset DatabaseAsset;
         public AbilityDefinitionAsset[] Abilities;
         public EffectDefinitionAsset[] Effects;
     }
@@ -18,13 +19,16 @@ namespace Tyrsha.Eciton.Authoring
         {
             var entity = GetEntity(TransformUsageFlags.None);
 
+            var abilitiesSrc = authoring.DatabaseAsset != null ? authoring.DatabaseAsset.Abilities : authoring.Abilities;
+            var effectsSrc = authoring.DatabaseAsset != null ? authoring.DatabaseAsset.Effects : authoring.Effects;
+
             using var builder = new BlobBuilder(Allocator.Persistent);
             ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
 
-            var abilities = builder.Allocate(ref root.Abilities, authoring.Abilities?.Length ?? 0);
+            var abilities = builder.Allocate(ref root.Abilities, abilitiesSrc?.Length ?? 0);
             for (int i = 0; i < abilities.Length; i++)
             {
-                var a = authoring.Abilities[i];
+                var a = abilitiesSrc[i];
                 abilities[i] = new AbilityDefinition
                 {
                     AbilityId = a.AbilityId,
@@ -41,10 +45,10 @@ namespace Tyrsha.Eciton.Authoring
                 };
             }
 
-            var effects = builder.Allocate(ref root.Effects, authoring.Effects?.Length ?? 0);
+            var effects = builder.Allocate(ref root.Effects, effectsSrc?.Length ?? 0);
             for (int i = 0; i < effects.Length; i++)
             {
-                var e = authoring.Effects[i];
+                var e = effectsSrc[i];
                 effects[i] = new EffectDefinition
                 {
                     EffectId = e.EffectId,

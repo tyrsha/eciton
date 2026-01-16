@@ -24,13 +24,29 @@ namespace Tyrsha.Eciton.Editor
                 if (authoring == null) continue;
 
                 checkedCount++;
-                if (!ValidateOne(authoring, path))
+                var abilities = authoring.DatabaseAsset != null ? authoring.DatabaseAsset.Abilities : authoring.Abilities;
+                var effects = authoring.DatabaseAsset != null ? authoring.DatabaseAsset.Effects : authoring.Effects;
+
+                if (!ValidateOne(abilities, effects, path))
+                    errorCount++;
+            }
+
+            // ScriptableObject(DB asset)도 검사
+            var dbGuids = AssetDatabase.FindAssets("t:AbilityEffectDatabaseAsset");
+            foreach (var guid in dbGuids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var db = AssetDatabase.LoadAssetAtPath<AbilityEffectDatabaseAsset>(path);
+                if (db == null) continue;
+
+                checkedCount++;
+                if (!ValidateOne(db.Abilities, db.Effects, path))
                     errorCount++;
             }
 
             if (checkedCount == 0)
             {
-                Debug.Log("Eciton DB Validate: no AbilityEffectDatabaseAuthoring found.");
+                Debug.Log("Eciton DB Validate: no AbilityEffectDatabaseAuthoring/Asset found.");
                 return;
             }
 
@@ -40,7 +56,7 @@ namespace Tyrsha.Eciton.Editor
                 Debug.LogError($"Eciton DB Validate: FAILED ({errorCount}/{checkedCount}).");
         }
 
-        private static bool ValidateOne(AbilityEffectDatabaseAuthoring authoring, string assetPath)
+        private static bool ValidateOne(AbilityDefinitionAsset[] abilities, EffectDefinitionAsset[] effects, string assetPath)
         {
             bool ok = true;
 
@@ -48,11 +64,11 @@ namespace Tyrsha.Eciton.Editor
             var effectIds = new HashSet<int>();
 
             // Effects: duplicates
-            if (authoring.Effects != null)
+            if (effects != null)
             {
-                for (int i = 0; i < authoring.Effects.Length; i++)
+                for (int i = 0; i < effects.Length; i++)
                 {
-                    var e = authoring.Effects[i];
+                    var e = effects[i];
                     if (e == null)
                     {
                         Debug.LogWarning($"[{assetPath}] Effects[{i}] is null.");
@@ -68,11 +84,11 @@ namespace Tyrsha.Eciton.Editor
             }
 
             // Abilities: duplicates + missing referenced effect ids
-            if (authoring.Abilities != null)
+            if (abilities != null)
             {
-                for (int i = 0; i < authoring.Abilities.Length; i++)
+                for (int i = 0; i < abilities.Length; i++)
                 {
-                    var a = authoring.Abilities[i];
+                    var a = abilities[i];
                     if (a == null)
                     {
                         Debug.LogWarning($"[{assetPath}] Abilities[{i}] is null.");
