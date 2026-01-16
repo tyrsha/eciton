@@ -1,7 +1,9 @@
 {
   "name": "Tyrsha.Eciton",
   "references": [
-    "Unity.Entities"
+    "Unity.Entities",
+    "Unity.Mathematics",
+    "Unity.Transforms"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

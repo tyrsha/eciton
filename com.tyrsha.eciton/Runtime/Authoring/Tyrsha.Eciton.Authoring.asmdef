@@ -2,7 +2,9 @@
   "name": "Tyrsha.Eciton.Authoring",
   "references": [
     "Tyrsha.Eciton",
-    "Unity.Entities"
+    "Unity.Entities",
+    "Unity.Transforms",
+    "Unity.Mathematics"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

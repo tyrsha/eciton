@@ -2,7 +2,9 @@
   "name": "Tyrsha.Eciton.RuntimeTests",
   "references": [
     "Tyrsha.Eciton",
-    "Unity.Entities"
+    "Unity.Entities",
+    "Unity.Mathematics",
+    "Unity.Transforms"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"
