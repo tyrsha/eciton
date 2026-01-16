@@ -17,6 +17,7 @@ namespace Tyrsha.Eciton
         protected override void OnUpdate()
         {
             var em = EntityManager;
+            double now = SystemAPI.Time.ElapsedTime;
 
             // 타겟 후보 캐시(스텁: 매 프레임 배열로 가져옴)
             using var targetQuery = em.CreateEntityQuery(
@@ -28,12 +29,23 @@ namespace Tyrsha.Eciton
             var targetFactions = targetQuery.ToComponentDataArray<Faction>(Unity.Collections.Allocator.Temp);
             var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Unity.Collections.Allocator.Temp);
 
-            Entities.WithoutBurst().ForEach((ref BehaviorTreeBlackboard bb, in Faction faction, in PerceptionSensor sensor, in AttackRange range, in LocalTransform xform) =>
+            Entities.WithoutBurst().ForEach((Entity self, ref BehaviorTreeBlackboard bb, in Faction faction, in PerceptionSensor sensor, in AttackRange range, in LocalTransform xform, DynamicBuffer<ThreatEntry> threat) =>
             {
+                float bestScore = float.MinValue;
                 float bestDistSq = float.MaxValue;
-                Entity best = Entity.Null;
+                Entity best = bb.Target; // 히스테리시스용
+
                 float radiusSq = sensor.Radius * sensor.Radius;
                 float3 pos = xform.Position;
+                float distWeight = sensor.DistanceWeight;
+                float hysteresis = sensor.SwitchHysteresis;
+
+                // LOS 후보 제한(훅)
+                bool requireLos = sensor.RequireLineOfSight != 0;
+                DynamicBuffer<VisibleTarget> visible = default;
+                bool hasVisibleBuffer = requireLos && em.HasBuffer<VisibleTarget>(self);
+                if (hasVisibleBuffer)
+                    visible = em.GetBuffer<VisibleTarget>(self);
 
                 for (int i = 0; i < targets.Length; i++)
                 {
@@ -45,10 +57,52 @@ namespace Tyrsha.Eciton
                     if (distSq > radiusSq)
                         continue;
 
-                    if (distSq < bestDistSq)
+                    var candidate = targets[i];
+
+                    if (hasVisibleBuffer && !IsVisible(visible, candidate))
+                        continue;
+
+                    float threatValue = GetThreat(threat, candidate, now);
+                    float priority = em.HasComponent<TargetPriority>(candidate) ? em.GetComponentData<TargetPriority>(candidate).Weight : 0f;
+                    float score = threatValue + priority - (distSq * distWeight);
+
+                    if (score > bestScore)
                     {
                         bestDistSq = distSq;
-                        best = targets[i];
+                        best = candidate;
+                        bestScore = score;
+                    }
+                }
+
+                // 히스테리시스: 기존 타겟이 충분히 괜찮으면 유지
+                if (bb.Target != Entity.Null && em.Exists(bb.Target))
+                {
+                    float currentDistSq = float.MaxValue;
+                    if (em.HasComponent<LocalTransform>(bb.Target))
+                    {
+                        float3 tpos = em.GetComponentData<LocalTransform>(bb.Target).Position;
+                        currentDistSq = math.lengthsq(tpos - pos);
+                    }
+
+                    float currentThreat = GetThreat(threat, bb.Target, now);
+                    float currentPriority = em.HasComponent<TargetPriority>(bb.Target) ? em.GetComponentData<TargetPriority>(bb.Target).Weight : 0f;
+                    float currentScore = currentThreat + currentPriority - (currentDistSq * distWeight);
+
+                    // 메모리: 반경 밖이어도 최근에 봤으면 유지
+                    bool withinRadiusOrRemembered = currentDistSq <= radiusSq || IsRemembered(threat, bb.Target, now, sensor.MemorySeconds);
+
+                    if (withinRadiusOrRemembered)
+                    {
+                        // LOS 제한이 있고 visible buffer가 있으면, 안 보이면 스위치 고려(메모리로 잠깐 유지 가능)
+                        bool currentVisibleOk = !hasVisibleBuffer || IsVisible(visible, bb.Target) || IsRemembered(threat, bb.Target, now, sensor.MemorySeconds);
+                        if (currentVisibleOk)
+                        {
+                            if (best == Entity.Null || currentScore + hysteresis >= bestScore)
+                            {
+                                best = bb.Target;
+                                bestDistSq = currentDistSq;
+                            }
+                        }
                     }
                 }
 
@@ -60,6 +114,46 @@ namespace Tyrsha.Eciton
             targets.Dispose();
             targetFactions.Dispose();
             targetTransforms.Dispose();
+        }
+
+        private static bool IsVisible(DynamicBuffer<VisibleTarget> visible, Entity target)
+        {
+            for (int i = 0; i < visible.Length; i++)
+                if (visible[i].Target == target)
+                    return true;
+            return false;
+        }
+
+        private static float GetThreat(DynamicBuffer<ThreatEntry> threat, Entity target, double now)
+        {
+            for (int i = 0; i < threat.Length; i++)
+            {
+                var e = threat[i];
+                if (e.Target == target)
+                {
+                    // seen time 갱신은 Perception이 관장(현재는 후보면 갱신)
+                    e.LastSeenTime = now;
+                    threat[i] = e;
+                    return e.Threat;
+                }
+            }
+            return 0f;
+        }
+
+        private static bool IsRemembered(DynamicBuffer<ThreatEntry> threat, Entity target, double now, float memorySeconds)
+        {
+            if (memorySeconds <= 0f)
+                return false;
+            for (int i = 0; i < threat.Length; i++)
+            {
+                var e = threat[i];
+                if (e.Target == target)
+                {
+                    if (e.LastSeenTime <= 0) return false;
+                    return (now - e.LastSeenTime) <= memorySeconds;
+                }
+            }
+            return false;
         }
     }
 }

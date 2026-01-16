@@ -15,11 +15,32 @@
 - **컴포넌트**
   - `Faction`: 팀/진영 구분(같은 팀은 타겟 제외)
   - `Targetable`: 타겟 후보 마커(플레이어/소환수/다른 몬스터 등)
+  - `TargetPriority`: 타겟 우선순위(값이 클수록 선호)
   - `PerceptionSensor`: 인지 반경(Radius)
   - `AttackRange`: “인레인지” 판정용 거리
   - `BehaviorTreeBlackboard`: `Target`, `TargetInRange` 등을 보관(런타임 가변)
+  - `ThreatEntry`(버퍼): 타겟별 위협도(aggro) 테이블
+  - `VisibleTarget`(버퍼): LOS(가시성) 훅으로 제공되는 “현재 보이는 타겟” 목록
 - **시스템**
-  - `PerceptionSystem`: 가장 가까운 적(Targetable & 다른 Faction)을 반경 내에서 선택해서 블랙보드를 갱신
+  - `PerceptionSystem`: 후보들을 점수화해 “최적 타겟”을 선택해서 블랙보드를 갱신
+  - `ThreatSystem`: 이벤트(EffectApplied) 기반으로 threat(aggro) 누적
+  - `ThreatDecaySystem`: threat 감쇠 및 메모리 만료 정리
+  - `LineOfSightAlwaysVisibleSystem`: LOS 기본 스텁(반경 내 타겟을 전부 보이는 것으로 간주)
+
+#### Perception 점수(Score) 개념(스텁)
+
+현재 구현은 아래처럼 “점수 기반 선택”으로 동작합니다(프로젝트에서 바꾸기 쉬움):
+
+- \(score = threat + priority - distSq \times distanceWeight\)
+- `SwitchHysteresis`로 “현재 타겟 유지”를 좀 더 선호(타겟 스위치 깜빡임 방지)
+- `MemorySeconds` 동안은 타겟이 잠깐 반경 밖/LOS 밖으로 나가도 유지할 수 있음(간단한 타겟 기억)
+
+#### LOS(라인오브사이트) 훅
+
+- `PerceptionSensor.RequireLineOfSight = 1`인 에이전트는 **가시성 훅을 켠 것**입니다.
+- 기본 제공 시스템(`LineOfSightAlwaysVisibleSystem`)은 “다 보인다”로 처리하지만,
+  실제 게임에서는 물리 레이캐스트/장애물 판정을 통해 에이전트의 `VisibleTarget` 버퍼를 채우는 시스템으로 교체하세요.
+  - Perception은 `VisibleTarget` 버퍼가 있을 때 **그 안에 있는 타겟만 후보로 인정**합니다.
 
 ### 2) Behavior Tree
 
@@ -58,6 +79,13 @@ BT 액션이 내는 것은 **게임플레이 결정**이 아니라 “요청”�
 - 플레이어/타겟: `IsTargetable=true`, `IsSensor=false`
 - 몬스터: `IsTargetable=true`, `IsSensor=true`
 
+PerceptionAuthoring 확장 필드(스텁):
+- **MemorySeconds**: 타겟 기억 시간
+- **ThreatDecayPerSecond**: 위협도 감쇠
+- **DistanceWeight**: 거리 패널티
+- **SwitchHysteresis**: 타겟 스위치 히스테리시스
+- **RequireLineOfSight**: LOS 훅 사용 여부
+
 ### B) MonsterAiAuthoring
 
 `MonsterAiAuthoring`에 `BehaviorTreeAsset`를 연결하면:
@@ -92,7 +120,8 @@ BT 액션이 내는 것은 **게임플레이 결정**이 아니라 “요청”�
 ## 운영 팁(확장 포인트)
 
 - Perception은 현재 “가장 가까운 적 1명”만 고릅니다.
-  - 시야각, LOS(라인오브사이트), 위협도(aggro), 가중치, 기억(최근 타겟) 등은 프로젝트에서 확장하세요.
+  - 현재는 점수 기반(threat/priority/거리) + 기억 + LOS 훅까지 포함했지만, 여전히 스텁입니다.
+  - 시야각/LOS(레이캐스트), 위협도 규칙(힐러 어그로/도발/감쇠), 위협도 기반 타겟 스위치, 파티/부대 AI 등은 프로젝트에서 확장하세요.
 - BT는 stateless 평가라서 장기 Running 노드(예: 이동 완료까지 유지) 같은 것은
   - `MoveToTargetRequest` 같은 **지속 컴포넌트**를 두고,
   - 다른 이동 시스템이 “완료 시 컴포넌트를 제거”하는 방식으로 구성하는 것을 추천합니다.
