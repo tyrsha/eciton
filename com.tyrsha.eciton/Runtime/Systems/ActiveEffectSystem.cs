@@ -11,6 +11,9 @@ namespace Tyrsha.Eciton
     {
         protected override void OnUpdate()
         {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+
             float dt = Time.DeltaTime;
 
             Entities.ForEach((
@@ -21,34 +24,39 @@ namespace Tyrsha.Eciton
                 for (int i = activeEffects.Length - 1; i >= 0; i--)
                 {
                     var effect = activeEffects[i];
-
-                    if (effect.IsPeriodic)
+                    if (!AbilityEffectDatabaseLookup.TryGetEffect(db, effect.EffectId, out var def))
                     {
-                        float period = effect.Period;
+                        activeEffects.RemoveAt(i);
+                        continue;
+                    }
+
+                    if (def.IsPeriodic)
+                    {
+                        float period = def.Period;
                         if (period > 0f)
                         {
                             effect.TimeToNextTick -= dt;
                             while (effect.TimeToNextTick <= 0f)
                             {
-                                ApplyAll(attributeRequests, effect);
+                                ApplyAll(attributeRequests, def, effect.StackCount <= 0 ? 1 : effect.StackCount);
                                 effect.TimeToNextTick += period;
                             }
                         }
                     }
 
-                    if (!effect.IsPermanent)
+                    if (!def.IsPermanent)
                     {
                         effect.RemainingTime -= dt;
                         if (effect.RemainingTime <= 0f)
                         {
                             // 만료 시 태그 제거
-                            if (effect.GrantedTag.IsValid)
-                                removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = effect.GrantedTag });
+                            if (def.GrantedTag.IsValid)
+                                removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = def.GrantedTag });
 
                             // 만료 시 지속형(비주기) modifier 되돌리기
-                            if (!effect.IsPeriodic && effect.RevertModifierOnEnd)
+                            if (!def.IsPeriodic && def.RevertModifierOnEnd)
                             {
-                                RevertAll(attributeRequests, effect);
+                                RevertAll(attributeRequests, def, effect.StackCount <= 0 ? 1 : effect.StackCount);
                             }
                             activeEffects.RemoveAt(i);
                             continue;
@@ -79,39 +87,32 @@ namespace Tyrsha.Eciton
             }
         }
 
-        private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, ActiveEffect effect)
+        private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
         {
-            if (effect.Modifiers.Length > 0)
+            int count = def.Modifiers.Length;
+            for (int i = 0; i < count; i++)
             {
-                for (int i = 0; i < effect.Modifiers.Length; i++)
-                {
-                    var mod = effect.Modifiers[i];
-                    if (mod.Magnitude != 0f)
-                        attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
-                }
-                return;
+                var mod = def.Modifiers[i];
+                if (mod.Magnitude == 0f)
+                    continue;
+                if (stackCount != 1)
+                    mod.Magnitude *= stackCount;
+                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
             }
-
-            if (effect.Modifier.Magnitude != 0f)
-                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = effect.Modifier });
         }
 
-        private static void RevertAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, ActiveEffect effect)
+        private static void RevertAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
         {
-            if (effect.Modifiers.Length > 0)
+            int count = def.Modifiers.Length;
+            for (int i = 0; i < count; i++)
             {
-                for (int i = 0; i < effect.Modifiers.Length; i++)
-                {
-                    var inv = Invert(effect.Modifiers[i]);
-                    if (inv.Magnitude != 0f)
-                        attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = inv });
-                }
-                return;
+                var inv = Invert(def.Modifiers[i]);
+                if (inv.Magnitude == 0f)
+                    continue;
+                if (stackCount != 1)
+                    inv.Magnitude *= stackCount;
+                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = inv });
             }
-
-            var inverse = Invert(effect.Modifier);
-            if (inverse.Magnitude != 0f)
-                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = inverse });
         }
     }
 }

@@ -19,6 +19,9 @@ namespace Tyrsha.Eciton
 
         protected override void OnUpdate()
         {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+
             int nextHandle = _nextHandle;
 
             Entities.ForEach((
@@ -37,20 +40,22 @@ namespace Tyrsha.Eciton
                 for (int i = 0; i < applyRequests.Length; i++)
                 {
                     var spec = applyRequests[i].Spec;
+                    if (!AbilityEffectDatabaseLookup.TryGetEffect(db, spec.EffectId, out var def))
+                        continue;
 
                     // 면역/차단 태그 체크
-                    if (spec.BlockedByTag.IsValid && HasTag(targetTags, spec.BlockedByTag.Value))
+                    if (def.BlockedByTag.IsValid && HasTag(targetTags, def.BlockedByTag.Value))
                         continue;
 
                     // 비주기(즉시) 효과: 바로 modifier 적용.
-                    if (!spec.IsPeriodic)
+                    if (!def.IsPeriodic)
                     {
-                        ApplyAll(attributeRequests, spec);
+                        ApplyAll(attributeRequests, def, 1);
                     }
 
                     // 태그 부여(즉시/지속 상관없이 적용 시점에 1회 추가).
-                    if (spec.GrantedTag.IsValid)
-                        addTagRequests.Add(new AddGameplayTagRequest { Tag = spec.GrantedTag });
+                    if (def.GrantedTag.IsValid)
+                        addTagRequests.Add(new AddGameplayTagRequest { Tag = def.GrantedTag });
 
                     // 이벤트: effect applied (스텁)
                     events.Add(new PendingGameplayEvent
@@ -68,42 +73,42 @@ namespace Tyrsha.Eciton
                     // 지속/주기 효과는 ActiveEffect로 관리한다.
                     // (Duration<=0 이면서 비주기면 ActiveEffect를 만들지 않는다.)
                     bool needsActive =
-                        spec.IsPeriodic ||
-                        (!spec.IsPermanent && spec.Duration > 0f);
+                        def.IsPeriodic ||
+                        (!def.IsPermanent && def.Duration > 0f);
 
                     if (needsActive)
                     {
                         // 스태킹 처리(EffectId + GrantedTag 기준 스텁)
-                        if (spec.StackingPolicy != EffectStackingPolicy.None)
+                        if (def.StackingPolicy != EffectStackingPolicy.None)
                         {
                             for (int e = 0; e < activeEffects.Length; e++)
                             {
-                                if (activeEffects[e].EffectId == spec.EffectId &&
-                                    activeEffects[e].GrantedTag.Value == spec.GrantedTag.Value)
+                                // EffectId + GrantedTag 기준 merge
+                                if (activeEffects[e].EffectId == def.EffectId)
                                 {
                                     var existing = activeEffects[e];
-                                    existing.StackingPolicy = spec.StackingPolicy;
-                                    existing.MaxStacks = spec.MaxStacks;
+                                    existing.StackingPolicy = def.StackingPolicy;
+                                    existing.MaxStacks = def.MaxStacks;
 
                                     int maxStacks = existing.MaxStacks <= 0 ? 1 : existing.MaxStacks;
                                     if (existing.StackCount <= 0) existing.StackCount = 1;
 
-                                    if (spec.StackingPolicy == EffectStackingPolicy.RefreshDuration)
+                                    if (def.StackingPolicy == EffectStackingPolicy.RefreshDuration)
                                     {
-                                        if (!existing.IsPermanent)
-                                            existing.RemainingTime = spec.Duration;
+                                        if (!def.IsPermanent)
+                                            existing.RemainingTime = def.Duration;
                                     }
-                                    else if (spec.StackingPolicy == EffectStackingPolicy.StackAdditive)
+                                    else if (def.StackingPolicy == EffectStackingPolicy.StackAdditive)
                                     {
                                         if (existing.StackCount < maxStacks)
                                             existing.StackCount++;
 
                                         // 스텁: 스택이 쌓일 때마다 즉시 modifier를 한 번 더 적용(DoT는 다음 틱부터 자연히 누적됨).
-                                        if (!spec.IsPeriodic)
-                                            ApplyAll(attributeRequests, spec);
+                                        if (!def.IsPeriodic)
+                                            ApplyAll(attributeRequests, def, 1);
 
-                                        if (!existing.IsPermanent)
-                                            existing.RemainingTime = spec.Duration;
+                                        if (!def.IsPermanent)
+                                            existing.RemainingTime = def.Duration;
                                     }
 
                                     activeEffects[e] = existing;
@@ -117,22 +122,13 @@ namespace Tyrsha.Eciton
                         activeEffects.Add(new ActiveEffect
                         {
                             Handle = handle,
-                            EffectId = spec.EffectId,
+                            EffectId = def.EffectId,
                             Level = spec.Level,
                             Source = spec.Source,
-                            RemainingTime = spec.IsPermanent ? 0f : spec.Duration,
-                            IsPermanent = spec.IsPermanent,
-                            Modifier = spec.Modifier,
-                            Modifiers = spec.Modifiers,
-                            IsPeriodic = spec.IsPeriodic,
-                            Period = spec.Period,
-                            // 스텁: 첫 틱은 Period 이후부터.
-                            TimeToNextTick = spec.IsPeriodic ? spec.Period : 0f,
-                            GrantedTag = spec.GrantedTag,
-                            BlockedByTag = spec.BlockedByTag,
-                            RevertModifierOnEnd = spec.RevertModifierOnEnd,
-                            StackingPolicy = spec.StackingPolicy,
-                            MaxStacks = spec.MaxStacks,
+                            RemainingTime = def.IsPermanent ? 0f : def.Duration,
+                            TimeToNextTick = def.IsPeriodic ? def.Period : 0f,
+                            StackingPolicy = def.StackingPolicy,
+                            MaxStacks = def.MaxStacks,
                             StackCount = 1,
                         });
                     }
@@ -152,10 +148,12 @@ namespace Tyrsha.Eciton
                         if (activeEffects[e].Handle.Value == handle.Value)
                         {
                             // 태그 제거 요청(효과 강제 제거 시)
-                            var tag = activeEffects[e].GrantedTag;
-                            if (tag.IsValid)
-                                removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = tag });
                             int removedEffectId = activeEffects[e].EffectId;
+                            if (AbilityEffectDatabaseLookup.TryGetEffect(db, removedEffectId, out var removedDef))
+                            {
+                                if (removedDef.GrantedTag.IsValid)
+                                    removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = removedDef.GrantedTag });
+                            }
                             activeEffects.RemoveAt(e);
 
                             events.Add(new PendingGameplayEvent
@@ -181,7 +179,10 @@ namespace Tyrsha.Eciton
 
                     for (int e = activeEffects.Length - 1; e >= 0; e--)
                     {
-                        if (activeEffects[e].GrantedTag.Value == tag.Value)
+                        int effectId = activeEffects[e].EffectId;
+                        if (!AbilityEffectDatabaseLookup.TryGetEffect(db, effectId, out var cleanseDef))
+                            continue;
+                        if (cleanseDef.GrantedTag.Value == tag.Value)
                         {
                             removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = tag });
                             activeEffects.RemoveAt(e);
@@ -197,21 +198,18 @@ namespace Tyrsha.Eciton
             _nextHandle = nextHandle;
         }
 
-        private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectSpec spec)
+        private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
         {
-            if (spec.Modifiers.Length > 0)
+            int count = def.Modifiers.Length;
+            for (int i = 0; i < count; i++)
             {
-                for (int i = 0; i < spec.Modifiers.Length; i++)
-                {
-                    var mod = spec.Modifiers[i];
-                    if (mod.Magnitude != 0f)
-                        attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
-                }
-                return;
+                var mod = def.Modifiers[i];
+                if (mod.Magnitude == 0f)
+                    continue;
+                if (stackCount != 1)
+                    mod.Magnitude *= stackCount;
+                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
             }
-
-            if (spec.Modifier.Magnitude != 0f)
-                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = spec.Modifier });
         }
 
         private static bool HasTag(DynamicBuffer<GameplayTagElement> tags, int tagValue)

@@ -13,6 +13,9 @@ namespace Tyrsha.Eciton
     {
         protected override void OnUpdate()
         {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+
             float dt = Time.DeltaTime;
 
             Entities.ForEach((
@@ -57,21 +60,26 @@ namespace Tyrsha.Eciton
                     }
 
                     var ability = granted[idx];
+                    if (!AbilityEffectDatabaseLookup.TryGetAbility(db, ability.AbilityId, out var def))
+                    {
+                        tryActivate.RemoveAt(i);
+                        continue;
+                    }
 
                     // 쿨다운 태그 방식: 태그가 있으면 실패
-                    if (ability.CooldownTag.IsValid && HasTag(tags, ability.CooldownTag.Value))
+                    if (def.CooldownTag.IsValid && HasTag(tags, def.CooldownTag.Value))
                     {
                         tryActivate.RemoveAt(i);
                         continue;
                     }
 
                     // 태그 요구조건(단일 Required/Blocked 스텁)
-                    if (ability.TagRequirements.Required.IsValid && !HasTag(tags, ability.TagRequirements.Required.Value))
+                    if (def.TagRequirements.Required.IsValid && !HasTag(tags, def.TagRequirements.Required.Value))
                     {
                         tryActivate.RemoveAt(i);
                         continue;
                     }
-                    if (ability.TagRequirements.Blocked.IsValid && HasTag(tags, ability.TagRequirements.Blocked.Value))
+                    if (def.TagRequirements.Blocked.IsValid && HasTag(tags, def.TagRequirements.Blocked.Value))
                     {
                         tryActivate.RemoveAt(i);
                         continue;
@@ -85,27 +93,27 @@ namespace Tyrsha.Eciton
                     }
 
                     // 마나 코스트
-                    if (ability.ManaCost > 0f && attributes.Mana < ability.ManaCost)
+                    if (def.ManaCost > 0f && attributes.Mana < def.ManaCost)
                     {
                         tryActivate.RemoveAt(i);
                         continue;
                     }
 
                     // 통과: 코스트 지불 + 쿨다운 시작 (스텁: 성공 시 바로 차감)
-                    if (ability.ManaCost > 0f)
-                        attributes.Mana -= ability.ManaCost;
-                    if (ability.CooldownDuration > 0f)
+                    if (def.ManaCost > 0f)
+                        attributes.Mana -= def.ManaCost;
+                    if (def.CooldownEffectId == 0 && def.CooldownDuration > 0f)
                     {
-                        ability.CooldownRemaining = ability.CooldownDuration;
+                        ability.CooldownRemaining = def.CooldownDuration;
                         granted[idx] = ability;
                     }
 
                     // 쿨다운을 Effect로 표현(권장): 성공 시 self에 쿨다운 effect 적용
-                    if (ability.CooldownEffectId != 0)
+                    if (def.CooldownEffectId != 0)
                     {
                         applyEffectById.Add(new ApplyEffectByIdRequest
                         {
-                            EffectId = ability.CooldownEffectId,
+                            EffectId = def.CooldownEffectId,
                             Level = 1,
                             Source = e,
                             Target = e

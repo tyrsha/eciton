@@ -28,41 +28,28 @@ namespace Tyrsha.Eciton
                     {
                         Spec = new EffectSpec
                         {
+                            // 정의 값은 EffectRequestSystem이 Blob DB에서 조회한다.
                             EffectId = def.EffectId,
                             Level = req.Level,
                             Source = req.Source,
                             Target = req.Target,
-                            Duration = def.Duration,
-                            IsPermanent = def.IsPermanent,
-                            IsPeriodic = def.IsPeriodic,
-                            Period = def.Period,
-                            GrantedTag = def.GrantedTag,
-                            BlockedByTag = def.BlockedByTag,
-                            // 스텁: DB에서 차단 태그를 EffectSpec로 내려보내기 위해 Modifier.DamageType은 그대로 두고,
-                            // 태그 면역은 EffectRequestSystem에서 ActiveEffect/Target의 태그를 확인하도록 확장한다.
-                            RevertModifierOnEnd = def.RevertModifierOnEnd,
-                            StackingPolicy = def.StackingPolicy,
-                            MaxStacks = def.MaxStacks,
+                            Duration = 0f,
+                            IsPermanent = false,
+                            IsPeriodic = false,
+                            Period = 0f,
+                            GrantedTag = GameplayTag.Invalid,
+                            BlockedByTag = GameplayTag.Invalid,
+                            RevertModifierOnEnd = false,
+                            StackingPolicy = EffectStackingPolicy.None,
+                            MaxStacks = 0,
                             Modifier = default,
-                            Modifiers = ToFixedList(def.Modifiers),
+                            Modifiers = default,
                         }
                     });
                 }
 
                 byId.Clear();
             }).Schedule();
-        }
-
-        private static Unity.Collections.FixedList128Bytes<AttributeModifier> ToFixedList(BlobArray<AttributeModifier> mods)
-        {
-            var list = new Unity.Collections.FixedList128Bytes<AttributeModifier>();
-            for (int i = 0; i < mods.Length; i++)
-            {
-                if (list.Capacity == list.Length)
-                    break;
-                list.Add(mods[i]);
-            }
-            return list;
         }
     }
 }

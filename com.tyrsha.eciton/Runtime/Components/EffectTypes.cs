@@ -78,36 +78,15 @@ namespace Tyrsha.Eciton
         public int EffectId;
         public int Level;
         public Entity Source;
+        /// <summary>남은 시간(초). 영구 효과면 0으로 유지.</summary>
         public float RemainingTime;
-        public bool IsPermanent;
-
-        /// <summary>스텁: 단일 modifier.</summary>
-        public AttributeModifier Modifier;
-
-        /// <summary>주기 효과 여부.</summary>
-        public bool IsPeriodic;
-
-        /// <summary>틱 간격(초). IsPeriodic=true일 때 사용.</summary>
-        public float Period;
 
         /// <summary>다음 틱까지 남은 시간(초).</summary>
         public float TimeToNextTick;
 
-        /// <summary>활성화된 동안 부여 중인 태그(유효할 때만 의미).</summary>
-        public GameplayTag GrantedTag;
-        public GameplayTag BlockedByTag;
-
-        /// <summary>만료 시 modifier 되돌리기 여부.</summary>
-        public bool RevertModifierOnEnd;
-
         public EffectStackingPolicy StackingPolicy;
         public int MaxStacks;
         public int StackCount;
-
-        /// <summary>
-        /// 다중 modifier 지원. 비어있으면 `Modifier`(단일)를 사용한다.
-        /// </summary>
-        public FixedList128Bytes<AttributeModifier> Modifiers;
     }
 
     /// <summary>

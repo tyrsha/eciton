@@ -40,14 +40,10 @@ namespace Tyrsha.Eciton
         public int Level;
         public Entity Source;
 
-        public float CooldownDuration;
+        /// <summary>
+        /// 런타임 가변 상태만 저장. (정의 값은 Blob DB에서 조회)
+        /// </summary>
         public float CooldownRemaining;
-        public float ManaCost;
-
-        public TagQuery TagRequirements;
-
-        public int CooldownEffectId;
-        public GameplayTag CooldownTag;
     }
 
     /// <summary>

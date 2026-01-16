@@ -116,19 +116,15 @@ namespace Tyrsha.Eciton.Tests
             var actor = CreateAscActor(health: 100f);
             var target = CreateAscActor(health: 100f);
 
-            // 능력 부여: 쿨다운 10초, 마나 코스트 20
-            var handle = new AbilityHandle { Value = 7, Version = 1 };
-            _em.GetBuffer<GrantedAbility>(actor).Add(new GrantedAbility
-            {
-                Handle = handle,
-                AbilityId = CommonIds.Ability_Heal,
-                Level = 1,
-                Source = actor,
-                CooldownDuration = 10f,
-                CooldownRemaining = 5f,
-                ManaCost = 20f,
-                TagRequirements = default
-            });
+            // 능력 부여(DB): 쿨다운 10초, 마나 코스트 20
+            _em.GetBuffer<GrantAbilityRequest>(actor).Add(new GrantAbilityRequest { AbilityId = 20, Level = 1, Source = actor });
+            _grant.Update();
+            var handle = _em.GetBuffer<GrantedAbility>(actor)[0].Handle;
+
+            // 쿨다운 중으로 세팅
+            var ga0 = _em.GetBuffer<GrantedAbility>(actor)[0];
+            ga0.CooldownRemaining = 5f;
+            _em.GetBuffer<GrantedAbility>(actor)[0] = ga0;
 
             // 마나 부족(0) + 쿨다운 중: 요청은 제거되어야 함
             _em.GetBuffer<TryActivateAbilityRequest>(actor).Add(new TryActivateAbilityRequest
@@ -203,7 +199,7 @@ namespace Tyrsha.Eciton.Tests
             var builder = new BlobBuilder(Allocator.Temp);
             ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
 
-            var abilities = builder.Allocate(ref root.Abilities, 1);
+            var abilities = builder.Allocate(ref root.Abilities, 2);
             abilities[0] = new AbilityDefinition
             {
                 AbilityId = CommonIds.Ability_Heal,
@@ -217,6 +213,22 @@ namespace Tyrsha.Eciton.Tests
                 TagRequirements = default,
                 CooldownEffectId = 2001,
                 CooldownTag = new GameplayTag { Value = 3001 },
+            };
+
+            // 게이트 테스트용 AbilityId=20 (쿨다운 remaining 방식)
+            abilities[1] = new AbilityDefinition
+            {
+                AbilityId = 20,
+                ExecutionType = AbilityExecutionType.ApplyEffectToTarget,
+                CooldownDuration = 10f,
+                ManaCost = 20f,
+                PrimaryEffectId = CommonIds.Effect_HealInstant,
+                SecondaryEffectId = 0,
+                CleanseTag = GameplayTag.Invalid,
+                ProjectileFlightTime = 0f,
+                TagRequirements = default,
+                CooldownEffectId = 0,
+                CooldownTag = GameplayTag.Invalid,
             };
 
             var effects = builder.Allocate(ref root.Effects, 2);

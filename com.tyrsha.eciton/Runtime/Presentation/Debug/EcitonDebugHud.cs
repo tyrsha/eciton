@@ -92,10 +92,20 @@ namespace Tyrsha.Eciton.Presentation
                     var active = em.GetBuffer<ActiveEffect>(selected);
                     if (active.Length == 0)
                         _sb.AppendLine("  (none)");
+                    AbilityEffectDatabase db = default;
+                    bool hasDb = TryGetDatabase(em, out db);
                     for (int i = 0; i < active.Length; i++)
                     {
                         var e = active[i];
-                        _sb.AppendLine($"  - EffectId={e.EffectId} Remain={(e.IsPermanent ? -1f : e.RemainingTime):0.##} Stack={e.StackCount} Tag={e.GrantedTag.Value} Periodic={e.IsPeriodic} Period={e.Period:0.##}");
+                        if (hasDb && AbilityEffectDatabaseLookup.TryGetEffect(db, e.EffectId, out var def))
+                        {
+                            float remain = def.IsPermanent ? -1f : e.RemainingTime;
+                            _sb.AppendLine($"  - EffectId={e.EffectId} Remain={remain:0.##} Stack={e.StackCount} Tag={def.GrantedTag.Value} Periodic={def.IsPeriodic} Period={def.Period:0.##}");
+                        }
+                        else
+                        {
+                            _sb.AppendLine($"  - EffectId={e.EffectId} Remain={e.RemainingTime:0.##} Stack={e.StackCount}");
+                        }
                     }
                 }
 
@@ -153,6 +163,19 @@ namespace Tyrsha.Eciton.Presentation
         private static int GetLen<T>(EntityManager em, Entity e) where T : unmanaged, IBufferElementData
         {
             return em.HasBuffer<T>(e) ? em.GetBuffer<T>(e).Length : 0;
+        }
+
+        private static bool TryGetDatabase(EntityManager em, out AbilityEffectDatabase db)
+        {
+            using var q = em.CreateEntityQuery(ComponentType.ReadOnly<AbilityEffectDatabase>());
+            if (q.CalculateEntityCount() == 0)
+            {
+                db = default;
+                return false;
+            }
+
+            db = q.GetSingleton<AbilityEffectDatabase>();
+            return db.Blob.IsCreated;
         }
     }
 }
