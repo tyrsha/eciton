@@ -29,7 +29,11 @@ namespace Tyrsha.Eciton
             var targetFactions = targetQuery.ToComponentDataArray<Faction>(Unity.Collections.Allocator.Temp);
             var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Unity.Collections.Allocator.Temp);
 
-            Entities.WithoutBurst().ForEach((Entity self, ref BehaviorTreeBlackboard bb, in Faction faction, in PerceptionSensor sensor, in AttackRange range, in LocalTransform xform, DynamicBuffer<ThreatEntry> threat) =>
+            Entities.WithoutBurst()
+                .WithReadOnly(targets)
+                .WithReadOnly(targetFactions)
+                .WithReadOnly(targetTransforms)
+                .ForEach((Entity self, ref BehaviorTreeBlackboard bb, in Faction faction, in PerceptionSensor sensor, in AttackRange range, in LocalTransform xform, DynamicBuffer<ThreatEntry> threat) =>
             {
                 float bestScore = float.MinValue;
                 float bestDistSq = float.MaxValue;

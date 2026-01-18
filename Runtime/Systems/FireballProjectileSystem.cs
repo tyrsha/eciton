@@ -14,7 +14,7 @@ namespace Tyrsha.Eciton
             float dt = Time.DeltaTime;
             var em = EntityManager;
 
-            Entities.WithoutBurst().ForEach((Entity entity, ref FireballProjectile projectile) =>
+            Entities.WithoutBurst().WithStructuralChanges().ForEach((Entity entity, ref FireballProjectile projectile) =>
             {
                 projectile.RemainingFlightTime -= dt;
                 if (projectile.RemainingFlightTime > 0f)

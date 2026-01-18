@@ -25,30 +25,56 @@ namespace Tyrsha.Eciton
             var targetFactions = targetQuery.ToComponentDataArray<Faction>(Unity.Collections.Allocator.Temp);
             var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Unity.Collections.Allocator.Temp);
 
-            Entities.WithoutBurst().ForEach((Entity self, in Faction faction, in PerceptionSensor sensor, in LocalTransform xform) =>
+            // 먼저 버퍼가 없는 엔티티에 버퍼 추가
+            Entities.WithoutBurst().WithStructuralChanges().ForEach((Entity self, in PerceptionSensor sensor) =>
             {
                 if (sensor.RequireLineOfSight == 0)
                     return;
 
                 if (!em.HasBuffer<VisibleTarget>(self))
                     em.AddBuffer<VisibleTarget>(self);
+            }).Run();
+
+            // 그 다음 버퍼 채우기 (NativeArray를 람다 밖에서 처리)
+            using var selfQuery = GetEntityQuery(typeof(Faction), typeof(PerceptionSensor), typeof(LocalTransform));
+            var selfEntities = selfQuery.ToEntityArray(Unity.Collections.Allocator.Temp);
+            var selfFactions = selfQuery.ToComponentDataArray<Faction>(Unity.Collections.Allocator.Temp);
+            var selfSensors = selfQuery.ToComponentDataArray<PerceptionSensor>(Unity.Collections.Allocator.Temp);
+            var selfTransforms = selfQuery.ToComponentDataArray<LocalTransform>(Unity.Collections.Allocator.Temp);
+
+            for (int s = 0; s < selfEntities.Length; s++)
+            {
+                var self = selfEntities[s];
+                var sensor = selfSensors[s];
+                
+                if (sensor.RequireLineOfSight == 0)
+                    continue;
+
+                if (!em.HasBuffer<VisibleTarget>(self))
+                    continue;
+
                 var visible = em.GetBuffer<VisibleTarget>(self);
                 visible.Clear();
 
                 float radiusSq = sensor.Radius * sensor.Radius;
-                float3 pos = xform.Position;
+                float3 pos = selfTransforms[s].Position;
+                int factionValue = selfFactions[s].Value;
 
                 for (int i = 0; i < targets.Length; i++)
                 {
-                    if (targetFactions[i].Value == faction.Value)
+                    if (targetFactions[i].Value == factionValue)
                         continue;
                     float distSq = math.lengthsq(targetTransforms[i].Position - pos);
                     if (distSq > radiusSq)
                         continue;
                     visible.Add(new VisibleTarget { Target = targets[i] });
                 }
-            }).Run();
+            }
 
+            selfEntities.Dispose();
+            selfFactions.Dispose();
+            selfSensors.Dispose();
+            selfTransforms.Dispose();
             targets.Dispose();
             targetFactions.Dispose();
             targetTransforms.Dispose();

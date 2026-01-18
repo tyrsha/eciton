@@ -15,7 +15,7 @@ namespace Tyrsha.Eciton
         {
             var em = EntityManager;
 
-            Entities.WithoutBurst().ForEach((Entity e, ref BehaviorTreeBlackboard bb, in BehaviorTreeAgent agent, ref BehaviorTreeLastResult last) =>
+            Entities.WithoutBurst().WithStructuralChanges().ForEach((Entity e, ref BehaviorTreeBlackboard bb, in BehaviorTreeAgent agent, ref BehaviorTreeLastResult last) =>
             {
                 if (!agent.Tree.IsCreated || agent.Tree.Value.Nodes.Length == 0)
                 {

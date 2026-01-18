@@ -18,7 +18,7 @@ namespace Tyrsha.Eciton
             var em = EntityManager;
 
             // 스텁 예제이므로 main thread에서 처리(간단/명확성 우선).
-            Entities.WithoutBurst().ForEach((
+            Entities.WithoutBurst().WithStructuralChanges().ForEach((
                 Entity entity,
                 in AbilitySystemComponent asc,
                 DynamicBuffer<GameplayTagElement> tags,

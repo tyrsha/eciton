@@ -17,7 +17,7 @@ namespace Tyrsha.Eciton
 
             var em = EntityManager;
 
-            Entities.WithoutBurst().ForEach((
+            Entities.WithoutBurst().WithStructuralChanges().ForEach((
                 Entity entity,
                 in AbilitySystemComponent asc,
                 DynamicBuffer<GameplayTagElement> tags,
