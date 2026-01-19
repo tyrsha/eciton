@@ -1,3 +1,5 @@
+using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -7,24 +9,17 @@ namespace Tyrsha.Eciton
     /// 실제 스택/태그/면역/예외 규칙 등은 이후 확장.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public class EffectRequestSystem : SystemBase
+    public partial class EffectRequestSystem : SystemBase
     {
         private int _nextHandle;
 
-        protected override void OnCreate()
+        [BurstCompile]
+        private partial struct EffectRequestJob : IJobEntity
         {
-            base.OnCreate();
-            _nextHandle = 1;
-        }
+            public AbilityEffectDatabase Db;
+            public NativeReference<int> NextHandle;
 
-        protected override void OnUpdate()
-        {
-            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
-                return;
-
-            int nextHandle = _nextHandle;
-
-            Entities.ForEach((
+            public void Execute(
                 Entity entity,
                 in DynamicBuffer<GameplayTagElement> targetTags,
                 DynamicBuffer<ActiveEffect> activeEffects,
@@ -34,13 +29,15 @@ namespace Tyrsha.Eciton
                 DynamicBuffer<AddGameplayTagRequest> addTagRequests,
                 DynamicBuffer<RemoveGameplayTagRequest> removeTagRequests,
                 DynamicBuffer<RemoveEffectsWithTagRequest> removeEffectsByTag,
-                DynamicBuffer<PendingGameplayEvent> events) =>
+                DynamicBuffer<PendingGameplayEvent> events)
             {
+                int nextHandle = NextHandle.Value;
+
                 // Apply
                 for (int i = 0; i < applyRequests.Length; i++)
                 {
                     var spec = applyRequests[i].Spec;
-                    if (!AbilityEffectDatabaseLookup.TryGetEffect(db, spec.EffectId, out var def))
+                    if (!AbilityEffectDatabaseLookup.TryGetEffect(Db, spec.EffectId, out var def))
                         continue;
 
                     // 면역/차단 태그 체크
@@ -149,7 +146,7 @@ namespace Tyrsha.Eciton
                         {
                             // 태그 제거 요청(효과 강제 제거 시)
                             int removedEffectId = activeEffects[e].EffectId;
-                            if (AbilityEffectDatabaseLookup.TryGetEffect(db, removedEffectId, out var removedDef))
+                            if (AbilityEffectDatabaseLookup.TryGetEffect(Db, removedEffectId, out var removedDef))
                             {
                                 if (removedDef.GrantedTag.IsValid)
                                     removeTagRequests.Add(new RemoveGameplayTagRequest { Tag = removedDef.GrantedTag });
@@ -180,7 +177,7 @@ namespace Tyrsha.Eciton
                     for (int e = activeEffects.Length - 1; e >= 0; e--)
                     {
                         int effectId = activeEffects[e].EffectId;
-                        if (!AbilityEffectDatabaseLookup.TryGetEffect(db, effectId, out var cleanseDef))
+                        if (!AbilityEffectDatabaseLookup.TryGetEffect(Db, effectId, out var cleanseDef))
                             continue;
                         if (cleanseDef.GrantedTag.Value == tag.Value)
                         {
@@ -193,33 +190,57 @@ namespace Tyrsha.Eciton
                 applyRequests.Clear();
                 removeRequests.Clear();
                 removeEffectsByTag.Clear();
-            }).Schedule();
 
-            _nextHandle = nextHandle;
-        }
+                NextHandle.Value = nextHandle;
+            }
 
-        private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
-        {
-            int count = def.Modifiers.Length;
-            for (int i = 0; i < count; i++)
+            private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
             {
-                var mod = def.Modifiers[i];
-                if (mod.Magnitude == 0f)
-                    continue;
-                if (stackCount != 1)
-                    mod.Magnitude *= stackCount;
-                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
+                int count = def.Modifiers.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    var mod = def.Modifiers[i];
+                    if (mod.Magnitude == 0f)
+                        continue;
+                    if (stackCount != 1)
+                        mod.Magnitude *= stackCount;
+                    attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
+                }
+            }
+
+            private static bool HasTag(in DynamicBuffer<GameplayTagElement> tags, int tagValue)
+            {
+                for (int i = 0; i < tags.Length; i++)
+                {
+                    if (tags[i].Tag.Value == tagValue)
+                        return true;
+                }
+                return false;
             }
         }
 
-        private static bool HasTag(DynamicBuffer<GameplayTagElement> tags, int tagValue)
+        protected override void OnCreate()
         {
-            for (int i = 0; i < tags.Length; i++)
+            base.OnCreate();
+            _nextHandle = 1;
+        }
+
+        protected override void OnUpdate()
+        {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+
+            using var nextHandleRef = new NativeReference<int>(Allocator.TempJob);
+            nextHandleRef.Value = _nextHandle;
+
+            Dependency = new EffectRequestJob
             {
-                if (tags[i].Tag.Value == tagValue)
-                    return true;
-            }
-            return false;
+                Db = db,
+                NextHandle = nextHandleRef
+            }.Schedule(Dependency);
+
+            Dependency.Complete();
+            _nextHandle = nextHandleRef.Value;
         }
     }
 }

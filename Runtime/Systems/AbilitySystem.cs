@@ -1,19 +1,27 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public class AbilitySystem : SystemBase
+    public partial class AbilitySystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct AbilitySystemJob : IJobEntity
         {
-            Entities.ForEach((ref AbilityBase ability, in EffectBase effect) =>
+            public void Execute(ref AbilityBase ability, in EffectBase effect)
             {
                 if (ability.IsActive)
                 {
                     // 능력을 실행하고 효과를 적용
+                    _ = effect;
                 }
-            }).ScheduleParallel();
+            }
+        }
+
+        protected override void OnUpdate()
+        {
+            Dependency = new AbilitySystemJob().ScheduleParallel(Dependency);
         }
     }
 }

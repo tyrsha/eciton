@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -9,14 +10,15 @@ namespace Tyrsha.Eciton
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(AbilityGrantSystem))]
     [UpdateBefore(typeof(AbilityInputSystem))]
-    public class AbilityInputAutoBindSystem : SystemBase
+    public partial class AbilityInputAutoBindSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct AbilityInputAutoBindJob : IJobEntity
         {
-            Entities.ForEach((
+            public void Execute(
                 DynamicBuffer<AbilityInputBindingByAbilityId> desired,
                 DynamicBuffer<GrantedAbility> granted,
-                DynamicBuffer<AbilityInputBinding> bindings) =>
+                DynamicBuffer<AbilityInputBinding> bindings)
             {
                 for (int i = 0; i < desired.Length; i++)
                 {
@@ -47,7 +49,12 @@ namespace Tyrsha.Eciton
                         }
                     }
                 }
-            }).ScheduleParallel();
+            }
+        }
+
+        protected override void OnUpdate()
+        {
+            Dependency = new AbilityInputAutoBindJob().ScheduleParallel(Dependency);
         }
     }
 }

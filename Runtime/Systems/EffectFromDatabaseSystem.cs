@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -7,21 +8,21 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(EffectRequestSystem))]
-    public class EffectFromDatabaseSystem : SystemBase
+    public partial class EffectFromDatabaseSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct EffectFromDatabaseJob : IJobEntity
         {
-            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
-                return;
+            public AbilityEffectDatabase Db;
 
-            Entities.ForEach((
+            public void Execute(
                 DynamicBuffer<ApplyEffectByIdRequest> byId,
-                DynamicBuffer<ApplyEffectRequest> apply) =>
+                DynamicBuffer<ApplyEffectRequest> apply)
             {
                 for (int i = 0; i < byId.Length; i++)
                 {
                     var req = byId[i];
-                    if (!AbilityEffectDatabaseLookup.TryGetEffect(db, req.EffectId, out var def))
+                    if (!AbilityEffectDatabaseLookup.TryGetEffect(Db, req.EffectId, out var def))
                         continue;
 
                     apply.Add(new ApplyEffectRequest
@@ -49,7 +50,17 @@ namespace Tyrsha.Eciton
                 }
 
                 byId.Clear();
-            }).Schedule();
+            }
+        }
+
+        protected override void OnUpdate()
+        {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+            Dependency = new EffectFromDatabaseJob
+            {
+                Db = db
+            }.Schedule(Dependency);
         }
     }
 }

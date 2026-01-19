@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -7,24 +8,23 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(EffectRequestSystem))]
-    public class ActiveEffectSystem : SystemBase
+    public partial class ActiveEffectSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct ActiveEffectJob : IJobEntity
         {
-            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
-                return;
+            public AbilityEffectDatabase Db;
+            public float Dt;
 
-            float dt = Time.DeltaTime;
-
-            Entities.ForEach((
+            public void Execute(
                 DynamicBuffer<ActiveEffect> activeEffects,
                 DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests,
-                DynamicBuffer<RemoveGameplayTagRequest> removeTagRequests) =>
+                DynamicBuffer<RemoveGameplayTagRequest> removeTagRequests)
             {
                 for (int i = activeEffects.Length - 1; i >= 0; i--)
                 {
                     var effect = activeEffects[i];
-                    if (!AbilityEffectDatabaseLookup.TryGetEffect(db, effect.EffectId, out var def))
+                    if (!AbilityEffectDatabaseLookup.TryGetEffect(Db, effect.EffectId, out var def))
                     {
                         activeEffects.RemoveAt(i);
                         continue;
@@ -35,7 +35,7 @@ namespace Tyrsha.Eciton
                         float period = def.Period;
                         if (period > 0f)
                         {
-                            effect.TimeToNextTick -= dt;
+                            effect.TimeToNextTick -= Dt;
                             while (effect.TimeToNextTick <= 0f)
                             {
                                 ApplyAll(attributeRequests, def, effect.StackCount <= 0 ? 1 : effect.StackCount);
@@ -46,7 +46,7 @@ namespace Tyrsha.Eciton
 
                     if (!def.IsPermanent)
                     {
-                        effect.RemainingTime -= dt;
+                        effect.RemainingTime -= Dt;
                         if (effect.RemainingTime <= 0f)
                         {
                             // 만료 시 태그 제거
@@ -65,54 +65,65 @@ namespace Tyrsha.Eciton
 
                     activeEffects[i] = effect;
                 }
-            }).Schedule();
-        }
+            }
 
-        private static AttributeModifier Invert(AttributeModifier mod)
-        {
-            switch (mod.Op)
+            private static AttributeModifier Invert(AttributeModifier mod)
             {
-                case AttributeModOp.Add:
-                    mod.Magnitude = -mod.Magnitude;
-                    return mod;
-                case AttributeModOp.Multiply:
-                    if (mod.Magnitude != 0f)
-                        mod.Magnitude = 1f / mod.Magnitude;
-                    return mod;
-                case AttributeModOp.Override:
-                default:
-                    // 스텁: Override는 되돌리기 불가로 취급
-                    mod.Magnitude = 0f;
-                    return mod;
+                switch (mod.Op)
+                {
+                    case AttributeModOp.Add:
+                        mod.Magnitude = -mod.Magnitude;
+                        return mod;
+                    case AttributeModOp.Multiply:
+                        if (mod.Magnitude != 0f)
+                            mod.Magnitude = 1f / mod.Magnitude;
+                        return mod;
+                    case AttributeModOp.Override:
+                    default:
+                        // 스텁: Override는 되돌리기 불가로 취급
+                        mod.Magnitude = 0f;
+                        return mod;
+                }
+            }
+
+            private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
+            {
+                int count = def.Modifiers.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    var mod = def.Modifiers[i];
+                    if (mod.Magnitude == 0f)
+                        continue;
+                    if (stackCount != 1)
+                        mod.Magnitude *= stackCount;
+                    attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
+                }
+            }
+
+            private static void RevertAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
+            {
+                int count = def.Modifiers.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    var inv = Invert(def.Modifiers[i]);
+                    if (inv.Magnitude == 0f)
+                        continue;
+                    if (stackCount != 1)
+                        inv.Magnitude *= stackCount;
+                    attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = inv });
+                }
             }
         }
 
-        private static void ApplyAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
+        protected override void OnUpdate()
         {
-            int count = def.Modifiers.Length;
-            for (int i = 0; i < count; i++)
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+            Dependency = new ActiveEffectJob
             {
-                var mod = def.Modifiers[i];
-                if (mod.Magnitude == 0f)
-                    continue;
-                if (stackCount != 1)
-                    mod.Magnitude *= stackCount;
-                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = mod });
-            }
-        }
-
-        private static void RevertAll(DynamicBuffer<ApplyAttributeModifierRequest> attributeRequests, EffectDefinition def, int stackCount)
-        {
-            int count = def.Modifiers.Length;
-            for (int i = 0; i < count; i++)
-            {
-                var inv = Invert(def.Modifiers[i]);
-                if (inv.Magnitude == 0f)
-                    continue;
-                if (stackCount != 1)
-                    inv.Magnitude *= stackCount;
-                attributeRequests.Add(new ApplyAttributeModifierRequest { Modifier = inv });
-            }
+                Db = db,
+                Dt = SystemAPI.Time.DeltaTime
+            }.Schedule(Dependency);
         }
     }
 }

@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -7,14 +8,15 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(AbilityActivationGateSystem))]
-    public class AbilityInputSystem : SystemBase
+    public partial class AbilityInputSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct AbilityInputJob : IJobEntity
         {
-            Entities.ForEach((
+            public void Execute(
                 DynamicBuffer<AbilityInputBinding> bindings,
                 DynamicBuffer<PressAbilityInputRequest> inputs,
-                DynamicBuffer<TryActivateAbilityRequest> tryActivate) =>
+                DynamicBuffer<TryActivateAbilityRequest> tryActivate)
             {
                 for (int i = 0; i < inputs.Length; i++)
                 {
@@ -32,17 +34,22 @@ namespace Tyrsha.Eciton
                 }
 
                 inputs.Clear();
-            }).ScheduleParallel();
+            }
+
+            private static AbilityHandle FindHandle(in DynamicBuffer<AbilityInputBinding> bindings, AbilityInputSlot slot)
+            {
+                for (int i = 0; i < bindings.Length; i++)
+                {
+                    if (bindings[i].Slot == slot)
+                        return bindings[i].Handle;
+                }
+                return AbilityHandle.Invalid;
+            }
         }
 
-        private static AbilityHandle FindHandle(DynamicBuffer<AbilityInputBinding> bindings, AbilityInputSlot slot)
+        protected override void OnUpdate()
         {
-            for (int i = 0; i < bindings.Length; i++)
-            {
-                if (bindings[i].Slot == slot)
-                    return bindings[i].Handle;
-            }
-            return AbilityHandle.Invalid;
+            Dependency = new AbilityInputJob().ScheduleParallel(Dependency);
         }
     }
 }
