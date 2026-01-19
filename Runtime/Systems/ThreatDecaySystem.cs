@@ -6,7 +6,7 @@ namespace Tyrsha.Eciton
     /// <summary>Threat 테이블을 시간에 따라 감쇠시키는 스텁.</summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(ThreatSystem))]
-    public partial class ThreatDecaySystem : SystemBase
+    public partial struct ThreatDecaySystem : ISystem
     {
         [BurstCompile]
         private partial struct ThreatDecayJob : IJobEntity
@@ -41,13 +41,13 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            Dependency = new ThreatDecayJob
+            state.Dependency = new ThreatDecayJob
             {
                 Dt = SystemAPI.Time.DeltaTime,
                 Now = SystemAPI.Time.ElapsedTime
-            }.ScheduleParallel(Dependency);
+            }.ScheduleParallel(state.Dependency);
         }
     }
 }

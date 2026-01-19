@@ -10,7 +10,7 @@ namespace Tyrsha.Eciton
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(FireballAbilitySystem))]
     [UpdateBefore(typeof(CommonAbilitySystems))]
-    public partial class AbilityActivationGateSystem : SystemBase
+    public partial struct AbilityActivationGateSystem : ISystem
     {
         [BurstCompile]
         private partial struct AbilityActivationGateJob : IJobEntity
@@ -133,16 +133,16 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
                 return;
 
-            Dependency = new AbilityActivationGateJob
+            state.Dependency = new AbilityActivationGateJob
             {
                 Db = db,
                 Dt = SystemAPI.Time.DeltaTime
-            }.ScheduleParallel(Dependency);
+            }.ScheduleParallel(state.Dependency);
         }
     }
 }
