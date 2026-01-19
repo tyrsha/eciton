@@ -1,3 +1,5 @@
+using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -7,29 +9,24 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(AbilityActivationGateSystem))]
-    public class AbilityGrantSystem : SystemBase
+    public partial class AbilityGrantSystem : SystemBase
     {
         private int _nextHandle;
 
-        protected override void OnCreate()
+        [BurstCompile]
+        private partial struct AbilityGrantJob : IJobEntity
         {
-            base.OnCreate();
-            _nextHandle = 1;
-        }
+            public AbilityEffectDatabase Db;
+            public NativeReference<int> NextHandle;
 
-        protected override void OnUpdate()
-        {
-            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
-                return;
-
-            int nextHandle = _nextHandle;
-
-            Entities.ForEach((DynamicBuffer<GrantAbilityRequest> requests, DynamicBuffer<GrantedAbility> granted) =>
+            public void Execute(DynamicBuffer<GrantAbilityRequest> requests, DynamicBuffer<GrantedAbility> granted)
             {
+                int nextHandle = NextHandle.Value;
+
                 for (int i = 0; i < requests.Length; i++)
                 {
                     var req = requests[i];
-                    if (!AbilityEffectDatabaseLookup.TryGetAbility(db, req.AbilityId, out var def))
+                    if (!AbilityEffectDatabaseLookup.TryGetAbility(Db, req.AbilityId, out var def))
                         continue;
 
                     var handle = new AbilityHandle { Value = nextHandle++, Version = 1 };
@@ -45,9 +42,32 @@ namespace Tyrsha.Eciton
                 }
 
                 requests.Clear();
-            }).Schedule();
+                NextHandle.Value = nextHandle;
+            }
+        }
 
-            _nextHandle = nextHandle;
+        protected override void OnCreate()
+        {
+            base.OnCreate();
+            _nextHandle = 1;
+        }
+
+        protected override void OnUpdate()
+        {
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+
+            using var nextHandleRef = new NativeReference<int>(Allocator.TempJob);
+            nextHandleRef.Value = _nextHandle;
+
+            Dependency = new AbilityGrantJob
+            {
+                Db = db,
+                NextHandle = nextHandleRef
+            }.Schedule(Dependency);
+
+            Dependency.Complete();
+            _nextHandle = nextHandleRef.Value;
         }
     }
 }

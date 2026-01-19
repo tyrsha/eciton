@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -8,14 +9,15 @@ namespace Tyrsha.Eciton
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(EffectRequestSystem))]
     [UpdateAfter(typeof(ActiveEffectSystem))]
-    public class GameplayTagSystem : SystemBase
+    public partial class GameplayTagSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct GameplayTagJob : IJobEntity
         {
-            Entities.ForEach((
+            public void Execute(
                 DynamicBuffer<GameplayTagElement> tags,
                 DynamicBuffer<AddGameplayTagRequest> addRequests,
-                DynamicBuffer<RemoveGameplayTagRequest> removeRequests) =>
+                DynamicBuffer<RemoveGameplayTagRequest> removeRequests)
             {
                 // Add
                 for (int i = 0; i < addRequests.Length; i++)
@@ -52,7 +54,12 @@ namespace Tyrsha.Eciton
 
                 addRequests.Clear();
                 removeRequests.Clear();
-            }).Schedule();
+            }
+        }
+
+        protected override void OnUpdate()
+        {
+            Dependency = new GameplayTagJob().Schedule(Dependency);
         }
     }
 }

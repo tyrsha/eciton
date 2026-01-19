@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Entities;
 using Tyrsha.Eciton;
 
@@ -11,12 +12,13 @@ namespace Tyrsha.Eciton.Presentation
     [UpdateAfter(typeof(GameplayTagSystem))]
     public partial class ActorPresentationSyncSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct ActorPresentationSyncJob : IJobEntity
         {
-            Entities.ForEach((
+            public void Execute(
                 ref ActorPresentationState presentation,
                 in AttributeData attributes,
-                in DynamicBuffer<GameplayTagElement> tags) =>
+                in DynamicBuffer<GameplayTagElement> tags)
             {
                 presentation.Health = attributes.Health;
                 presentation.Shield = attributes.Shield;
@@ -28,17 +30,22 @@ namespace Tyrsha.Eciton.Presentation
 
                 // 스텁: 태그 기반으로 바로 VFX 토글
                 presentation.BurningVfxEnabled = presentation.IsBurning;
-            }).ScheduleParallel();
+            }
+
+            private static bool HasTag(in DynamicBuffer<GameplayTagElement> tags, int tagValue)
+            {
+                for (int i = 0; i < tags.Length; i++)
+                {
+                    if (tags[i].Tag.Value == tagValue)
+                        return true;
+                }
+                return false;
+            }
         }
 
-        private static bool HasTag(DynamicBuffer<GameplayTagElement> tags, int tagValue)
+        protected override void OnUpdate()
         {
-            for (int i = 0; i < tags.Length; i++)
-            {
-                if (tags[i].Tag.Value == tagValue)
-                    return true;
-            }
-            return false;
+            Dependency = new ActorPresentationSyncJob().ScheduleParallel(Dependency);
         }
     }
 }

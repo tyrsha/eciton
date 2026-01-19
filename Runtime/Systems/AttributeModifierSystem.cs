@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -7,12 +8,17 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(ActiveEffectSystem))]
-    public class AttributeModifierSystem : SystemBase
+    public partial class AttributeModifierSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct AttributeModifierWithResistJob : IJobEntity
         {
-            // 저항 컴포넌트가 있는 경우
-            Entities.ForEach((Entity e, ref AttributeData attributes, ref DamageResistanceData resist, DynamicBuffer<ApplyAttributeModifierRequest> requests, DynamicBuffer<PendingGameplayEvent> events) =>
+            public void Execute(
+                Entity e,
+                ref AttributeData attributes,
+                ref DamageResistanceData resist,
+                DynamicBuffer<ApplyAttributeModifierRequest> requests,
+                DynamicBuffer<PendingGameplayEvent> events)
             {
                 for (int i = 0; i < requests.Length; i++)
                 {
@@ -22,10 +28,18 @@ namespace Tyrsha.Eciton
                 }
 
                 requests.Clear();
-            }).ScheduleParallel();
+            }
+        }
 
-            // 저항 컴포넌트가 없는 경우
-            Entities.WithNone<DamageResistanceData>().ForEach((Entity e, ref AttributeData attributes, DynamicBuffer<ApplyAttributeModifierRequest> requests, DynamicBuffer<PendingGameplayEvent> events) =>
+        [BurstCompile]
+        [WithNone(typeof(DamageResistanceData))]
+        private partial struct AttributeModifierNoResistJob : IJobEntity
+        {
+            public void Execute(
+                Entity e,
+                ref AttributeData attributes,
+                DynamicBuffer<ApplyAttributeModifierRequest> requests,
+                DynamicBuffer<PendingGameplayEvent> events)
             {
                 for (int i = 0; i < requests.Length; i++)
                 {
@@ -35,7 +49,13 @@ namespace Tyrsha.Eciton
                 }
 
                 requests.Clear();
-            }).ScheduleParallel();
+            }
+        }
+
+        protected override void OnUpdate()
+        {
+            Dependency = new AttributeModifierWithResistJob().ScheduleParallel(Dependency);
+            Dependency = new AttributeModifierNoResistJob().ScheduleParallel(Dependency);
         }
 
         private static void ApplyModifier(ref AttributeData data, ref DamageResistanceData resist, AttributeModifier mod)
