@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton
 {
@@ -15,18 +16,31 @@ namespace Tyrsha.Eciton
         {
             var em = EntityManager;
 
-            Entities.WithoutBurst().WithStructuralChanges().ForEach((Entity e, ref BehaviorTreeBlackboard bb, in BehaviorTreeAgent agent, ref BehaviorTreeLastResult last) =>
+            using var query = GetEntityQuery(
+                ComponentType.ReadWrite<BehaviorTreeBlackboard>(),
+                ComponentType.ReadOnly<BehaviorTreeAgent>(),
+                ComponentType.ReadWrite<BehaviorTreeLastResult>());
+            using var entities = query.ToEntityArray(Allocator.Temp);
+
+            for (int i = 0; i < entities.Length; i++)
             {
+                var e = entities[i];
+                var bb = em.GetComponentData<BehaviorTreeBlackboard>(e);
+                var agent = em.GetComponentData<BehaviorTreeAgent>(e);
+                var last = em.GetComponentData<BehaviorTreeLastResult>(e);
+
                 if (!agent.Tree.IsCreated || agent.Tree.Value.Nodes.Length == 0)
                 {
                     last.Status = BtStatus.Failure;
                     last.LastNodeIndex = -1;
-                    return;
+                    em.SetComponentData(e, last);
+                    continue;
                 }
 
                 last.LastNodeIndex = 0;
                 last.Status = TickNode(em, e, bb, agent, 0);
-            }).Run();
+                em.SetComponentData(e, last);
+            }
         }
 
         private static BtStatus TickNode(EntityManager em, Entity entity, BehaviorTreeBlackboard bb, BehaviorTreeAgent agent, int nodeIndex)

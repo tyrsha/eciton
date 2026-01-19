@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton
 {
@@ -21,13 +22,18 @@ namespace Tyrsha.Eciton
 
             var em = EntityManager;
 
-            Entities.WithoutBurst().WithStructuralChanges().ForEach((
-                Entity entity,
-                in AbilitySystemComponent asc,
-                DynamicBuffer<GrantedAbility> granted,
-                DynamicBuffer<TryActivateAbilityRequest> tryActivate) =>
+            using var query = GetEntityQuery(
+                ComponentType.ReadOnly<AbilitySystemComponent>(),
+                ComponentType.ReadWrite<GrantedAbility>(),
+                ComponentType.ReadWrite<TryActivateAbilityRequest>());
+            using var entities = query.ToEntityArray(Allocator.Temp);
+
+            for (int q = 0; q < entities.Length; q++)
             {
-                _ = asc;
+                var entity = entities[q];
+                _ = em.GetComponentData<AbilitySystemComponent>(entity);
+                var granted = em.GetBuffer<GrantedAbility>(entity);
+                var tryActivate = em.GetBuffer<TryActivateAbilityRequest>(entity);
 
                 for (int i = tryActivate.Length - 1; i >= 0; i--)
                 {
@@ -93,7 +99,7 @@ namespace Tyrsha.Eciton
                     // 실행 완료: 요청 소비
                     tryActivate.RemoveAt(i);
                 }
-            }).Run();
+            }
         }
 
         private static void ApplyEffectsById(EntityManager em, Entity source, Entity target, int primary, int secondary)

@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton
 {
@@ -17,20 +18,26 @@ namespace Tyrsha.Eciton
 
             var em = EntityManager;
 
-            Entities.WithoutBurst().WithStructuralChanges().ForEach((
-                Entity entity,
-                in AbilitySystemComponent asc,
-                DynamicBuffer<GameplayTagElement> tags,
-                DynamicBuffer<GrantedAbility> granted,
-                DynamicBuffer<TryActivateAbilityRequest> tryActivate) =>
+            using var query = GetEntityQuery(
+                ComponentType.ReadOnly<AbilitySystemComponent>(),
+                ComponentType.ReadWrite<GameplayTagElement>(),
+                ComponentType.ReadWrite<GrantedAbility>(),
+                ComponentType.ReadWrite<TryActivateAbilityRequest>());
+            using var entities = query.ToEntityArray(Allocator.Temp);
+
+            for (int q = 0; q < entities.Length; q++)
             {
-                _ = asc;
+                var entity = entities[q];
+                _ = em.GetComponentData<AbilitySystemComponent>(entity);
+                var tags = em.GetBuffer<GameplayTagElement>(entity);
+                var granted = em.GetBuffer<GrantedAbility>(entity);
+                var tryActivate = em.GetBuffer<TryActivateAbilityRequest>(entity);
 
                 // 스턴이면 어떤 능력도 못 쓰는 것으로 처리(요청은 실패로 소비)
                 if (HasTag(tags, CommonIds.Tag_Stunned))
                 {
                     tryActivate.Clear();
-                    return;
+                    continue;
                 }
 
                 for (int i = tryActivate.Length - 1; i >= 0; i--)
@@ -99,7 +106,7 @@ namespace Tyrsha.Eciton
                             break;
                     }
                 }
-            }).Run();
+            }
         }
 
         private static bool HasTag(DynamicBuffer<GameplayTagElement> tags, int tagValue)

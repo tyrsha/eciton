@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton
 {
@@ -25,16 +26,29 @@ namespace Tyrsha.Eciton
                 ComponentType.ReadOnly<Faction>(),
                 ComponentType.ReadOnly<LocalTransform>());
 
-            var targets = targetQuery.ToEntityArray(Unity.Collections.Allocator.Temp);
-            var targetFactions = targetQuery.ToComponentDataArray<Faction>(Unity.Collections.Allocator.Temp);
-            var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Unity.Collections.Allocator.Temp);
+            var targets = targetQuery.ToEntityArray(Allocator.Temp);
+            var targetFactions = targetQuery.ToComponentDataArray<Faction>(Allocator.Temp);
+            var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
 
-            Entities.WithoutBurst()
-                .WithReadOnly(targets)
-                .WithReadOnly(targetFactions)
-                .WithReadOnly(targetTransforms)
-                .ForEach((Entity self, ref BehaviorTreeBlackboard bb, in Faction faction, in PerceptionSensor sensor, in AttackRange range, in LocalTransform xform, DynamicBuffer<ThreatEntry> threat) =>
+            using var selfQuery = GetEntityQuery(
+                ComponentType.ReadWrite<BehaviorTreeBlackboard>(),
+                ComponentType.ReadOnly<Faction>(),
+                ComponentType.ReadOnly<PerceptionSensor>(),
+                ComponentType.ReadOnly<AttackRange>(),
+                ComponentType.ReadOnly<LocalTransform>(),
+                ComponentType.ReadWrite<ThreatEntry>());
+            using var selfEntities = selfQuery.ToEntityArray(Allocator.Temp);
+
+            for (int s = 0; s < selfEntities.Length; s++)
             {
+                var self = selfEntities[s];
+                var bb = em.GetComponentData<BehaviorTreeBlackboard>(self);
+                var faction = em.GetComponentData<Faction>(self);
+                var sensor = em.GetComponentData<PerceptionSensor>(self);
+                var range = em.GetComponentData<AttackRange>(self);
+                var xform = em.GetComponentData<LocalTransform>(self);
+                var threat = em.GetBuffer<ThreatEntry>(self);
+
                 float bestScore = float.MinValue;
                 float bestDistSq = float.MaxValue;
                 Entity best = bb.Target; // 히스테리시스용
@@ -113,7 +127,8 @@ namespace Tyrsha.Eciton
                 bb.Target = best;
                 float attackRange = range.Value <= 0f ? 0f : range.Value;
                 bb.TargetInRange = (best != Entity.Null && attackRange > 0f && bestDistSq <= attackRange * attackRange) ? (byte)1 : (byte)0;
-            }).Run();
+                em.SetComponentData(self, bb);
+            }
 
             targets.Dispose();
             targetFactions.Dispose();
