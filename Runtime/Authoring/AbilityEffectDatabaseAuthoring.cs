@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Collections;
 using UnityEngine;
 
 namespace Tyrsha.Eciton.Authoring
@@ -22,7 +23,7 @@ namespace Tyrsha.Eciton.Authoring
             var abilitiesSrc = authoring.DatabaseAsset != null ? authoring.DatabaseAsset.Abilities : authoring.Abilities;
             var effectsSrc = authoring.DatabaseAsset != null ? authoring.DatabaseAsset.Effects : authoring.Effects;
 
-            using var builder = new BlobBuilder(Allocator.Persistent);
+            using var builder = new BlobBuilder(AllocatorManager.Persistent);
             ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
 
             var abilities = builder.Allocate(ref root.Abilities, abilitiesSrc?.Length ?? 0);
@@ -92,7 +93,7 @@ namespace Tyrsha.Eciton.Authoring
                 }
             }
 
-            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
+            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(AllocatorManager.Persistent);
             AddComponent(entity, new AbilityEffectDatabase { Blob = blob });
         }
     }

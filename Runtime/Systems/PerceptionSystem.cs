@@ -26,9 +26,9 @@ namespace Tyrsha.Eciton
                 ComponentType.ReadOnly<Faction>(),
                 ComponentType.ReadOnly<LocalTransform>());
 
-            var targets = targetQuery.ToEntityArray(Allocator.Temp);
-            var targetFactions = targetQuery.ToComponentDataArray<Faction>(Allocator.Temp);
-            var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
+            var targets = targetQuery.ToEntityArray(AllocatorManager.Temp);
+            var targetFactions = targetQuery.ToComponentDataArray<Faction>(AllocatorManager.Temp);
+            var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(AllocatorManager.Temp);
 
             var selfQuery = state.GetEntityQuery(
                 ComponentType.ReadWrite<BehaviorTreeBlackboard>(),
@@ -37,7 +37,7 @@ namespace Tyrsha.Eciton
                 ComponentType.ReadOnly<AttackRange>(),
                 ComponentType.ReadOnly<LocalTransform>(),
                 ComponentType.ReadWrite<ThreatEntry>());
-            using var selfEntities = selfQuery.ToEntityArray(Allocator.Temp);
+            using var selfEntities = selfQuery.ToEntityArray(AllocatorManager.Temp);
 
             for (int s = 0; s < selfEntities.Length; s++)
             {

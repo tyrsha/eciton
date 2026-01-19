@@ -1,4 +1,5 @@
 using Tyrsha.Eciton;
+using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
@@ -23,7 +24,7 @@ namespace Tyrsha.Eciton.Authoring
             BlobAssetReference<BehaviorTreeBlob> blob = default;
             if (authoring.Tree != null && authoring.Tree.Nodes != null && authoring.Tree.Nodes.Length > 0)
             {
-                using var builder = new BlobBuilder(Allocator.Persistent);
+                using var builder = new BlobBuilder(AllocatorManager.Persistent);
                 ref var root = ref builder.ConstructRoot<BehaviorTreeBlob>();
 
                 var nodes = builder.Allocate(ref root.Nodes, authoring.Tree.Nodes.Length);
@@ -56,7 +57,7 @@ namespace Tyrsha.Eciton.Authoring
                     };
                 }
 
-                blob = builder.CreateBlobAssetReference<BehaviorTreeBlob>(Allocator.Persistent);
+                blob = builder.CreateBlobAssetReference<BehaviorTreeBlob>(AllocatorManager.Persistent);
             }
 
             AddComponent(entity, new BehaviorTreeAgent { Tree = blob });

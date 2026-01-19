@@ -19,7 +19,7 @@ namespace Tyrsha.Eciton
 
             // 스텁: 메인 스레드에서 큐로 이동
             var query = state.GetEntityQuery(ComponentType.ReadWrite<PendingGameplayEvent>());
-            using var entities = query.ToEntityArray(Allocator.Temp);
+            using var entities = query.ToEntityArray(AllocatorManager.Temp);
 
             for (int e = 0; e < entities.Length; e++)
             {

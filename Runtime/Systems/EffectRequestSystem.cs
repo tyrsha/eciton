@@ -229,7 +229,7 @@ namespace Tyrsha.Eciton
             if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
                 return;
 
-            using var nextHandleRef = new NativeReference<int>(Allocator.TempJob);
+            using var nextHandleRef = new NativeReference<int>(AllocatorManager.TempJob);
             nextHandleRef.Value = _nextHandle;
 
             state.Dependency = new EffectRequestJob

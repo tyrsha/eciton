@@ -20,7 +20,7 @@ namespace Tyrsha.Eciton.Presentation
                 All = new[] { ComponentType.ReadOnly<AbilitySystemComponent>() },
                 None = new[] { ComponentType.ReadOnly<ActorPresentationState>() }
             });
-            using var entities = query.ToEntityArray(Allocator.Temp);
+            using var entities = query.ToEntityArray(AllocatorManager.Temp);
 
             for (int i = 0; i < entities.Length; i++)
             {

@@ -20,7 +20,7 @@ namespace Tyrsha.Eciton.Presentation
                 ComponentType.ReadOnly<AbilitySystemComponent>(),
                 ComponentType.ReadOnly<AddGameplayTagRequest>(),
                 ComponentType.ReadOnly<RemoveGameplayTagRequest>());
-            using var entities = query.ToEntityArray(Allocator.Temp);
+            using var entities = query.ToEntityArray(AllocatorManager.Temp);
 
             for (int i = 0; i < entities.Length; i++)
             {

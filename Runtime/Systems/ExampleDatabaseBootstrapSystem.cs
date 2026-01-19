@@ -18,7 +18,7 @@ namespace Tyrsha.Eciton
                 return;
 
             // 기본 DB 생성
-            var builder = new BlobBuilder(Allocator.Persistent);
+            var builder = new BlobBuilder(AllocatorManager.Persistent);
             ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
 
             var abilities = builder.Allocate(ref root.Abilities, 4);
@@ -211,7 +211,7 @@ namespace Tyrsha.Eciton
             };
             builder.Allocate(ref effects[8].Modifiers, 0);
 
-            var blobRef = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
+            var blobRef = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(AllocatorManager.Persistent);
             builder.Dispose();
 
             var dbEntity = em.CreateEntity();

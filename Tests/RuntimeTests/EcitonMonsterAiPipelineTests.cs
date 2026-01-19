@@ -73,7 +73,7 @@ namespace Tyrsha.Eciton.Tests
         private void CreateTestDatabaseSingleton()
         {
             // AbilityId=42만 있으면 됨(GrantSystem이 DB 조회하므로)
-            var builder = new BlobBuilder(Allocator.Temp);
+            var builder = new BlobBuilder(AllocatorManager.Temp);
             ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
 
             var abilities = builder.Allocate(ref root.Abilities, 1);
@@ -94,7 +94,7 @@ namespace Tyrsha.Eciton.Tests
 
             builder.Allocate(ref root.Effects, 0);
 
-            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
+            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(AllocatorManager.Persistent);
             builder.Dispose();
 
             var dbEntity = _em.CreateEntity();
@@ -103,12 +103,12 @@ namespace Tyrsha.Eciton.Tests
 
         private static BlobAssetReference<BehaviorTreeBlob> BuildSinglePressTree()
         {
-            var builder = new BlobBuilder(Allocator.Temp);
+            var builder = new BlobBuilder(AllocatorManager.Temp);
             ref var root = ref builder.ConstructRoot<BehaviorTreeBlob>();
             var nodes = builder.Allocate(ref root.Nodes, 1);
             builder.Allocate(ref root.Children, 0);
             nodes[0] = new BehaviorTreeNode { Type = BtNodeType.Action, Action = BtActionType.PressAbilitySlot, Slot = AbilityInputSlot.Slot1 };
-            var blob = builder.CreateBlobAssetReference<BehaviorTreeBlob>(Allocator.Persistent);
+            var blob = builder.CreateBlobAssetReference<BehaviorTreeBlob>(AllocatorManager.Persistent);
             builder.Dispose();
             return blob;
         }

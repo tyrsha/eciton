@@ -16,8 +16,8 @@ namespace Tyrsha.Eciton
             var em = state.EntityManager;
 
             var query = state.GetEntityQuery(ComponentType.ReadWrite<FireballProjectile>());
-            using var entities = query.ToEntityArray(Allocator.Temp);
-            using var projectiles = query.ToComponentDataArray<FireballProjectile>(Allocator.Temp);
+            using var entities = query.ToEntityArray(AllocatorManager.Temp);
+            using var projectiles = query.ToComponentDataArray<FireballProjectile>(AllocatorManager.Temp);
 
             for (int i = 0; i < entities.Length; i++)
             {

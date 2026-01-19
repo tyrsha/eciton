@@ -230,7 +230,7 @@ namespace Tyrsha.Eciton.Tests
         private void CreateTestDatabaseSingleton()
         {
             // 테스트용 DB를 직접 생성(ExampleDatabaseBootstrapSystem과 값 동일)
-            var builder = new BlobBuilder(Allocator.Temp);
+            var builder = new BlobBuilder(AllocatorManager.Temp);
             ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
 
             builder.Allocate(ref root.Abilities, 0);
@@ -300,7 +300,7 @@ namespace Tyrsha.Eciton.Tests
             m3[0] = new AttributeModifier { Attribute = AttributeId.Health, Op = AttributeModOp.Add, Magnitude = -10f, DamageType = DamageType.Fire };
             m3[1] = new AttributeModifier { Attribute = AttributeId.Mana, Op = AttributeModOp.Add, Magnitude = -5f };
 
-            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
+            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(AllocatorManager.Persistent);
             builder.Dispose();
 
             var dbEntity = _em.CreateEntity();

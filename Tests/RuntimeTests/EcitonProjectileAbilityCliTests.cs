@@ -112,7 +112,7 @@ namespace Tyrsha.Eciton.Tests
 
         private void CreateTestDatabaseSingleton()
         {
-            var builder = new BlobBuilder(Allocator.Temp);
+            var builder = new BlobBuilder(AllocatorManager.Temp);
             ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
 
             // AbilityId=10: projectile, flight 0.1, apply effects 100 and 101
@@ -165,7 +165,7 @@ namespace Tyrsha.Eciton.Tests
             var m1 = builder.Allocate(ref effects[1].Modifiers, 1);
             m1[0] = new AttributeModifier { Attribute = AttributeId.Mana, Op = AttributeModOp.Add, Magnitude = -2f };
 
-            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
+            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(AllocatorManager.Persistent);
             builder.Dispose();
 
             var dbEntity = _em.CreateEntity();

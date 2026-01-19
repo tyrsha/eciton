@@ -23,7 +23,7 @@ namespace Tyrsha.Eciton
                 ComponentType.ReadWrite<GameplayTagElement>(),
                 ComponentType.ReadWrite<GrantedAbility>(),
                 ComponentType.ReadWrite<TryActivateAbilityRequest>());
-            using var entities = query.ToEntityArray(Allocator.Temp);
+            using var entities = query.ToEntityArray(AllocatorManager.Temp);
 
             for (int q = 0; q < entities.Length; q++)
             {

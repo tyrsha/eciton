@@ -196,7 +196,7 @@ namespace Tyrsha.Eciton.Tests
 
         private void CreateTestDatabaseSingleton()
         {
-            var builder = new BlobBuilder(Allocator.Temp);
+            var builder = new BlobBuilder(AllocatorManager.Temp);
             ref var root = ref builder.ConstructRoot<AbilityEffectDatabaseBlob>();
 
             var abilities = builder.Allocate(ref root.Abilities, 2);
@@ -264,7 +264,7 @@ namespace Tyrsha.Eciton.Tests
             };
             builder.Allocate(ref effects[1].Modifiers, 0);
 
-            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(Allocator.Persistent);
+            var blob = builder.CreateBlobAssetReference<AbilityEffectDatabaseBlob>(AllocatorManager.Persistent);
             builder.Dispose();
 
             var dbEntity = _em.CreateEntity();

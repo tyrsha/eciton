@@ -22,19 +22,19 @@ namespace Tyrsha.Eciton
                 ComponentType.ReadOnly<Faction>(),
                 ComponentType.ReadOnly<LocalTransform>());
 
-            var targets = targetQuery.ToEntityArray(Allocator.Temp);
-            var targetFactions = targetQuery.ToComponentDataArray<Faction>(Allocator.Temp);
-            var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
+            var targets = targetQuery.ToEntityArray(AllocatorManager.Temp);
+            var targetFactions = targetQuery.ToComponentDataArray<Faction>(AllocatorManager.Temp);
+            var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(AllocatorManager.Temp);
 
             // 그 다음 버퍼 채우기 (NativeArray를 람다 밖에서 처리)
             var selfQuery = state.GetEntityQuery(
                 ComponentType.ReadOnly<Faction>(),
                 ComponentType.ReadOnly<PerceptionSensor>(),
                 ComponentType.ReadOnly<LocalTransform>());
-            var selfEntities = selfQuery.ToEntityArray(Allocator.Temp);
-            var selfFactions = selfQuery.ToComponentDataArray<Faction>(Allocator.Temp);
-            var selfSensors = selfQuery.ToComponentDataArray<PerceptionSensor>(Allocator.Temp);
-            var selfTransforms = selfQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
+            var selfEntities = selfQuery.ToEntityArray(AllocatorManager.Temp);
+            var selfFactions = selfQuery.ToComponentDataArray<Faction>(AllocatorManager.Temp);
+            var selfSensors = selfQuery.ToComponentDataArray<PerceptionSensor>(AllocatorManager.Temp);
+            var selfTransforms = selfQuery.ToComponentDataArray<LocalTransform>(AllocatorManager.Temp);
 
             for (int s = 0; s < selfEntities.Length; s++)
             {

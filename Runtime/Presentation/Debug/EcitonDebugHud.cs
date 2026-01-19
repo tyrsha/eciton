@@ -1,5 +1,6 @@
 using System.Text;
 using Tyrsha.Eciton;
+using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
@@ -34,7 +35,7 @@ namespace Tyrsha.Eciton.Presentation
 
             var em = world.EntityManager;
             using var q = em.CreateEntityQuery(ComponentType.ReadOnly<AbilitySystemComponent>());
-            var entities = q.ToEntityArray(Unity.Collections.Allocator.Temp);
+            var entities = q.ToEntityArray(AllocatorManager.Temp);
 
             GUILayout.BeginArea(new Rect(10, 10, 720, Screen.height - 20), GUI.skin.window);
             GUILayout.Label($"Eciton Debug HUD (ASC entities: {entities.Length})");

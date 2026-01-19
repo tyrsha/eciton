@@ -20,7 +20,7 @@ namespace Tyrsha.Eciton
                 ComponentType.ReadWrite<BehaviorTreeBlackboard>(),
                 ComponentType.ReadOnly<BehaviorTreeAgent>(),
                 ComponentType.ReadWrite<BehaviorTreeLastResult>());
-            using var entities = query.ToEntityArray(Allocator.Temp);
+            using var entities = query.ToEntityArray(AllocatorManager.Temp);
 
             for (int i = 0; i < entities.Length; i++)
             {

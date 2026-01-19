@@ -33,7 +33,7 @@ namespace Tyrsha.Eciton.Tests
         public void BehaviorTree_press_ability_slot_emits_input_request()
         {
             // BT: Sequence(HasTarget, TargetInRange, PressSlot1)
-            var builder = new BlobBuilder(Allocator.Temp);
+            var builder = new BlobBuilder(AllocatorManager.Temp);
             ref var root = ref builder.ConstructRoot<BehaviorTreeBlob>();
 
             var nodes = builder.Allocate(ref root.Nodes, 4);
@@ -47,7 +47,7 @@ namespace Tyrsha.Eciton.Tests
             nodes[2] = new BehaviorTreeNode { Type = BtNodeType.Condition, Condition = BtConditionType.TargetInRange };
             nodes[3] = new BehaviorTreeNode { Type = BtNodeType.Action, Action = BtActionType.PressAbilitySlot, Slot = AbilityInputSlot.Slot1 };
 
-            var blob = builder.CreateBlobAssetReference<BehaviorTreeBlob>(Allocator.Persistent);
+            var blob = builder.CreateBlobAssetReference<BehaviorTreeBlob>(AllocatorManager.Persistent);
             builder.Dispose();
 
             var agent = _em.CreateEntity();
