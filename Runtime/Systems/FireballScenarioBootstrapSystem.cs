@@ -9,18 +9,18 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(FireballAbilitySystem))]
-    public class FireballScenarioBootstrapSystem : SystemBase
+    public partial struct FireballScenarioBootstrapSystem : ISystem
     {
         private bool _initialized;
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (_initialized)
                 return;
 
             _initialized = true;
 
-            var em = EntityManager;
+            var em = state.EntityManager;
 
             var actor1 = em.CreateEntity();
             em.AddComponentData(actor1, new AbilitySystemComponent { Owner = actor1, Avatar = actor1 });

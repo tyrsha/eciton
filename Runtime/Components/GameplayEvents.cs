@@ -36,14 +36,12 @@ namespace Tyrsha.Eciton
     /// 이벤트 큐를 보장하는 부트스트랩 시스템.
     /// </summary>
     [UpdateInGroup(typeof(InitializationSystemGroup))]
-    public class GameplayEventQueueBootstrapSystem : SystemBase
+    public partial struct GameplayEventQueueBootstrapSystem : ISystem
     {
-        protected override void OnCreate()
+        public void OnCreate(ref SystemState state)
         {
-            base.OnCreate();
-
-            var em = EntityManager;
-            using var q = em.CreateEntityQuery(typeof(GameplayEventQueueSingleton));
+            var em = state.EntityManager;
+            var q = state.GetEntityQuery(ComponentType.ReadOnly<GameplayEventQueueSingleton>());
             if (q.CalculateEntityCount() > 0)
                 return;
 
@@ -52,7 +50,7 @@ namespace Tyrsha.Eciton
             em.AddBuffer<GameplayEventQueue>(e);
         }
 
-        protected override void OnUpdate() { }
+        public void OnUpdate(ref SystemState state) { }
     }
 
     /// <summary>이벤트 큐 싱글톤 마커.</summary>

@@ -9,9 +9,9 @@ namespace Tyrsha.Eciton.Presentation
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(GameplayEventDispatchSystem))]
-    public class GameplayCueFromEventQueueSystem : SystemBase
+    public partial struct GameplayCueFromEventQueueSystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (!SystemAPI.TryGetSingletonEntity<GameplayEventQueueSingleton>(out var queueEntity))
                 return;
@@ -19,7 +19,7 @@ namespace Tyrsha.Eciton.Presentation
             if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
                 return;
 
-            var em = EntityManager;
+            var em = state.EntityManager;
             var queue = em.GetBuffer<GameplayEventQueue>(queueEntity);
 
             // 스텁: 메인 스레드에서 처리 후 큐 비움

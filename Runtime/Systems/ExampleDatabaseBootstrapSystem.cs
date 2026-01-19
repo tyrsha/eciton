@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton
 {
@@ -7,14 +8,12 @@ namespace Tyrsha.Eciton
     /// 실제 게임 프로젝트에서는 Authoring/Baker로 대체하는 것을 권장.
     /// </summary>
     [UpdateInGroup(typeof(InitializationSystemGroup))]
-    public class ExampleDatabaseBootstrapSystem : SystemBase
+    public partial struct ExampleDatabaseBootstrapSystem : ISystem
     {
-        protected override void OnCreate()
+        public void OnCreate(ref SystemState state)
         {
-            base.OnCreate();
-
-            var em = EntityManager;
-            using var q = em.CreateEntityQuery(typeof(AbilityEffectDatabase));
+            var em = state.EntityManager;
+            var q = state.GetEntityQuery(ComponentType.ReadOnly<AbilityEffectDatabase>());
             if (q.CalculateEntityCount() > 0)
                 return;
 
@@ -219,7 +218,7 @@ namespace Tyrsha.Eciton
             em.AddComponentData(dbEntity, new AbilityEffectDatabase { Blob = blobRef });
         }
 
-        protected override void OnUpdate() { }
+        public void OnUpdate(ref SystemState state) { }
     }
 }
 

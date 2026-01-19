@@ -10,16 +10,14 @@ namespace Tyrsha.Eciton.Presentation
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(GameplayEventDispatchSystem))]
     [UpdateBefore(typeof(GameplayCueFromEventQueueSystem))]
-    public class GameplayEventLogSystem : SystemBase
+    public partial struct GameplayEventLogSystem : ISystem
     {
         private const int MaxEntries = 256;
 
-        protected override void OnCreate()
+        public void OnCreate(ref SystemState state)
         {
-            base.OnCreate();
-
-            var em = EntityManager;
-            using var q = em.CreateEntityQuery(typeof(GameplayEventLogSingleton));
+            var em = state.EntityManager;
+            var q = state.GetEntityQuery(ComponentType.ReadOnly<GameplayEventLogSingleton>());
             if (q.CalculateEntityCount() > 0)
                 return;
 
@@ -28,14 +26,14 @@ namespace Tyrsha.Eciton.Presentation
             em.AddBuffer<GameplayEventLogEntry>(e);
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (!SystemAPI.TryGetSingletonEntity<GameplayEventQueueSingleton>(out var queueEntity))
                 return;
             if (!SystemAPI.TryGetSingletonEntity<GameplayEventLogSingleton>(out var logEntity))
                 return;
 
-            var em = EntityManager;
+            var em = state.EntityManager;
             var queue = em.GetBuffer<GameplayEventQueue>(queueEntity);
             var log = em.GetBuffer<GameplayEventLogEntry>(logEntity);
 

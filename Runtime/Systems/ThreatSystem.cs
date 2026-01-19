@@ -9,16 +9,16 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(GameplayEventDispatchSystem))]
-    public class ThreatSystem : SystemBase
+    public partial struct ThreatSystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (!SystemAPI.TryGetSingletonEntity<GameplayEventQueueSingleton>(out var queueEntity))
                 return;
             if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
                 return;
 
-            var em = EntityManager;
+            var em = state.EntityManager;
             var queue = em.GetBuffer<GameplayEventQueue>(queueEntity);
 
             double now = SystemAPI.Time.ElapsedTime;
