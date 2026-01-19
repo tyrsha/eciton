@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Tyrsha.Eciton;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton.Presentation
 {
@@ -15,13 +16,18 @@ namespace Tyrsha.Eciton.Presentation
         {
             var em = EntityManager;
 
-            Entities.WithoutBurst().ForEach((
-                Entity e,
-                in AbilitySystemComponent asc,
-                DynamicBuffer<AddGameplayTagRequest> addReq,
-                DynamicBuffer<RemoveGameplayTagRequest> removeReq) =>
+            using var query = GetEntityQuery(
+                ComponentType.ReadOnly<AbilitySystemComponent>(),
+                ComponentType.ReadOnly<AddGameplayTagRequest>(),
+                ComponentType.ReadOnly<RemoveGameplayTagRequest>());
+            using var entities = query.ToEntityArray(Allocator.Temp);
+
+            for (int i = 0; i < entities.Length; i++)
             {
-                _ = asc;
+                var e = entities[i];
+                _ = em.GetComponentData<AbilitySystemComponent>(e);
+                var addReq = em.GetBuffer<AddGameplayTagRequest>(e);
+                var removeReq = em.GetBuffer<RemoveGameplayTagRequest>(e);
 
                 if (!em.HasBuffer<GameplayCueEvent>(e))
                     em.AddBuffer<GameplayCueEvent>(e);
@@ -40,7 +46,7 @@ namespace Tyrsha.Eciton.Presentation
                     if (tag.IsValid)
                         cues.Add(new GameplayCueEvent { Type = GameplayCueEventType.TagRemoved, Tag = tag });
                 }
-            }).Run();
+            }
         }
     }
 }

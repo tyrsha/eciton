@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton
 {
@@ -17,14 +18,18 @@ namespace Tyrsha.Eciton
             var queue = em.GetBuffer<GameplayEventQueue>(queueEntity);
 
             // 스텁: 메인 스레드에서 큐로 이동
-            Entities.WithoutBurst().ForEach((DynamicBuffer<PendingGameplayEvent> pending) =>
+            using var query = GetEntityQuery(ComponentType.ReadWrite<PendingGameplayEvent>());
+            using var entities = query.ToEntityArray(Allocator.Temp);
+
+            for (int e = 0; e < entities.Length; e++)
             {
+                var pending = em.GetBuffer<PendingGameplayEvent>(entities[e]);
                 for (int i = 0; i < pending.Length; i++)
                 {
                     queue.Add(new GameplayEventQueue { Event = pending[i].Event });
                 }
                 pending.Clear();
-            }).Run();
+            }
         }
     }
 }

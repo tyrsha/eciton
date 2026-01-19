@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Tyrsha.Eciton;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton.Presentation
 {
@@ -14,11 +15,19 @@ namespace Tyrsha.Eciton.Presentation
             var em = EntityManager;
 
             // 스텁: ASC가 있고 PresentationState가 없는 엔티티에 추가
-            Entities.WithoutBurst().WithNone<ActorPresentationState>().ForEach((Entity e, in AbilitySystemComponent asc) =>
+            using var query = GetEntityQuery(new EntityQueryDesc
             {
-                _ = asc;
+                All = new[] { ComponentType.ReadOnly<AbilitySystemComponent>() },
+                None = new[] { ComponentType.ReadOnly<ActorPresentationState>() }
+            });
+            using var entities = query.ToEntityArray(Allocator.Temp);
+
+            for (int i = 0; i < entities.Length; i++)
+            {
+                var e = entities[i];
+                _ = em.GetComponentData<AbilitySystemComponent>(e);
                 em.AddComponentData(e, default(ActorPresentationState));
-            }).Run();
+            }
         }
     }
 }

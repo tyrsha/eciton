@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton
 {
@@ -21,26 +22,16 @@ namespace Tyrsha.Eciton
                 ComponentType.ReadOnly<Faction>(),
                 ComponentType.ReadOnly<LocalTransform>());
 
-            var targets = targetQuery.ToEntityArray(Unity.Collections.Allocator.Temp);
-            var targetFactions = targetQuery.ToComponentDataArray<Faction>(Unity.Collections.Allocator.Temp);
-            var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Unity.Collections.Allocator.Temp);
-
-            // 먼저 버퍼가 없는 엔티티에 버퍼 추가
-            Entities.WithoutBurst().WithStructuralChanges().ForEach((Entity self, in PerceptionSensor sensor) =>
-            {
-                if (sensor.RequireLineOfSight == 0)
-                    return;
-
-                if (!em.HasBuffer<VisibleTarget>(self))
-                    em.AddBuffer<VisibleTarget>(self);
-            }).Run();
+            var targets = targetQuery.ToEntityArray(Allocator.Temp);
+            var targetFactions = targetQuery.ToComponentDataArray<Faction>(Allocator.Temp);
+            var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
 
             // 그 다음 버퍼 채우기 (NativeArray를 람다 밖에서 처리)
             using var selfQuery = GetEntityQuery(typeof(Faction), typeof(PerceptionSensor), typeof(LocalTransform));
-            var selfEntities = selfQuery.ToEntityArray(Unity.Collections.Allocator.Temp);
-            var selfFactions = selfQuery.ToComponentDataArray<Faction>(Unity.Collections.Allocator.Temp);
-            var selfSensors = selfQuery.ToComponentDataArray<PerceptionSensor>(Unity.Collections.Allocator.Temp);
-            var selfTransforms = selfQuery.ToComponentDataArray<LocalTransform>(Unity.Collections.Allocator.Temp);
+            var selfEntities = selfQuery.ToEntityArray(Allocator.Temp);
+            var selfFactions = selfQuery.ToComponentDataArray<Faction>(Allocator.Temp);
+            var selfSensors = selfQuery.ToComponentDataArray<PerceptionSensor>(Allocator.Temp);
+            var selfTransforms = selfQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
 
             for (int s = 0; s < selfEntities.Length; s++)
             {
@@ -51,7 +42,7 @@ namespace Tyrsha.Eciton
                     continue;
 
                 if (!em.HasBuffer<VisibleTarget>(self))
-                    continue;
+                    em.AddBuffer<VisibleTarget>(self);
 
                 var visible = em.GetBuffer<VisibleTarget>(self);
                 visible.Clear();
