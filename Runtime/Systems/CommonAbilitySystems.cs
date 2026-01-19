@@ -9,16 +9,16 @@ namespace Tyrsha.Eciton
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(AbilityRequestSystem))]
     [UpdateAfter(typeof(AbilityExecutionSystem))]
-    public class CommonAbilitySystems : SystemBase
+    public partial struct CommonAbilitySystems : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
                 return;
 
-            var em = EntityManager;
+            var em = state.EntityManager;
 
-            using var query = GetEntityQuery(
+            var query = state.GetEntityQuery(
                 ComponentType.ReadOnly<AbilitySystemComponent>(),
                 ComponentType.ReadWrite<GameplayTagElement>(),
                 ComponentType.ReadWrite<GrantedAbility>(),

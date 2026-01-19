@@ -10,13 +10,13 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(AbilityInputSystem))]
-    public class BehaviorTreeTickSystem : SystemBase
+    public partial struct BehaviorTreeTickSystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            var em = EntityManager;
+            var em = state.EntityManager;
 
-            using var query = GetEntityQuery(
+            var query = state.GetEntityQuery(
                 ComponentType.ReadWrite<BehaviorTreeBlackboard>(),
                 ComponentType.ReadOnly<BehaviorTreeAgent>(),
                 ComponentType.ReadWrite<BehaviorTreeLastResult>());

@@ -9,17 +9,17 @@ namespace Tyrsha.Eciton
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(AbilityRequestSystem))]
     [UpdateAfter(typeof(AbilityExecutionSystem))]
-    public class FireballAbilitySystem : SystemBase
+    public partial struct FireballAbilitySystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
                 return;
 
-            var em = EntityManager;
+            var em = state.EntityManager;
 
             // 스텁 예제이므로 main thread에서 처리(간단/명확성 우선).
-            using var query = GetEntityQuery(
+            var query = state.GetEntityQuery(
                 ComponentType.ReadOnly<AbilitySystemComponent>(),
                 ComponentType.ReadWrite<GameplayTagElement>(),
                 ComponentType.ReadWrite<GrantedAbility>(),

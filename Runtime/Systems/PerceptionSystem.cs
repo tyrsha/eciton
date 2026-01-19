@@ -13,15 +13,15 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(BehaviorTreeTickSystem))]
-    public class PerceptionSystem : SystemBase
+    public partial struct PerceptionSystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            var em = EntityManager;
+            var em = state.EntityManager;
             double now = SystemAPI.Time.ElapsedTime;
 
             // 타겟 후보 캐시(스텁: 매 프레임 배열로 가져옴)
-            using var targetQuery = em.CreateEntityQuery(
+            var targetQuery = state.GetEntityQuery(
                 ComponentType.ReadOnly<Targetable>(),
                 ComponentType.ReadOnly<Faction>(),
                 ComponentType.ReadOnly<LocalTransform>());
@@ -30,7 +30,7 @@ namespace Tyrsha.Eciton
             var targetFactions = targetQuery.ToComponentDataArray<Faction>(Allocator.Temp);
             var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
 
-            using var selfQuery = GetEntityQuery(
+            var selfQuery = state.GetEntityQuery(
                 ComponentType.ReadWrite<BehaviorTreeBlackboard>(),
                 ComponentType.ReadOnly<Faction>(),
                 ComponentType.ReadOnly<PerceptionSensor>(),
