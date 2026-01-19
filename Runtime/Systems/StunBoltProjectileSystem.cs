@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Collections;
 
 namespace Tyrsha.Eciton
 {
@@ -9,14 +10,24 @@ namespace Tyrsha.Eciton
     {
         protected override void OnUpdate()
         {
-            float dt = Time.DeltaTime;
+            float dt = SystemAPI.Time.DeltaTime;
             var em = EntityManager;
 
-            Entities.WithoutBurst().WithStructuralChanges().ForEach((Entity entity, ref StunBoltProjectile projectile) =>
+            using var query = GetEntityQuery(ComponentType.ReadWrite<StunBoltProjectile>());
+            using var entities = query.ToEntityArray(Allocator.Temp);
+            using var projectiles = query.ToComponentDataArray<StunBoltProjectile>(Allocator.Temp);
+
+            for (int i = 0; i < entities.Length; i++)
             {
+                var entity = entities[i];
+                var projectile = projectiles[i];
+
                 projectile.RemainingFlightTime -= dt;
                 if (projectile.RemainingFlightTime > 0f)
-                    return;
+                {
+                    em.SetComponentData(entity, projectile);
+                    continue;
+                }
 
                 if (projectile.Target != Entity.Null && em.Exists(projectile.Target))
                 {
@@ -29,7 +40,7 @@ namespace Tyrsha.Eciton
                 }
 
                 em.DestroyEntity(entity);
-            }).Run();
+            }
         }
     }
 }
