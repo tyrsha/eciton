@@ -9,7 +9,7 @@ namespace Tyrsha.Eciton
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(EffectRequestSystem))]
     [UpdateAfter(typeof(ActiveEffectSystem))]
-    public partial class GameplayTagSystem : SystemBase
+    public partial struct GameplayTagSystem : ISystem
     {
         [BurstCompile]
         private partial struct GameplayTagJob : IJobEntity
@@ -57,9 +57,9 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            Dependency = new GameplayTagJob().Schedule(Dependency);
+            state.Dependency = new GameplayTagJob().Schedule(state.Dependency);
         }
     }
 }

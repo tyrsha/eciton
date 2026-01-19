@@ -10,7 +10,7 @@ namespace Tyrsha.Eciton.Presentation
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(GameplayTagSystem))]
-    public partial class ActorPresentationSyncSystem : SystemBase
+    public partial struct ActorPresentationSyncSystem : ISystem
     {
         [BurstCompile]
         private partial struct ActorPresentationSyncJob : IJobEntity
@@ -43,9 +43,9 @@ namespace Tyrsha.Eciton.Presentation
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            Dependency = new ActorPresentationSyncJob().ScheduleParallel(Dependency);
+            state.Dependency = new ActorPresentationSyncJob().ScheduleParallel(state.Dependency);
         }
     }
 }

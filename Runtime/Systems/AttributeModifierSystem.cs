@@ -8,7 +8,7 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(ActiveEffectSystem))]
-    public partial class AttributeModifierSystem : SystemBase
+    public partial struct AttributeModifierSystem : ISystem
     {
         [BurstCompile]
         private partial struct AttributeModifierWithResistJob : IJobEntity
@@ -52,10 +52,10 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            Dependency = new AttributeModifierWithResistJob().ScheduleParallel(Dependency);
-            Dependency = new AttributeModifierNoResistJob().ScheduleParallel(Dependency);
+            state.Dependency = new AttributeModifierWithResistJob().ScheduleParallel(state.Dependency);
+            state.Dependency = new AttributeModifierNoResistJob().ScheduleParallel(state.Dependency);
         }
 
         private static void ApplyModifier(ref AttributeData data, ref DamageResistanceData resist, AttributeModifier mod)
