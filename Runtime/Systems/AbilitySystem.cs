@@ -4,7 +4,7 @@ using Unity.Entities;
 namespace Tyrsha.Eciton
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public partial class AbilitySystem : SystemBase
+    public partial struct AbilitySystem : ISystem
     {
         [BurstCompile]
         private partial struct AbilitySystemJob : IJobEntity
@@ -19,9 +19,9 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            Dependency = new AbilitySystemJob().ScheduleParallel(Dependency);
+            state.Dependency = new AbilitySystemJob().ScheduleParallel(state.Dependency);
         }
     }
 }

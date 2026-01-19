@@ -8,7 +8,7 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(EffectRequestSystem))]
-    public partial class EffectFromDatabaseSystem : SystemBase
+    public partial struct EffectFromDatabaseSystem : ISystem
     {
         [BurstCompile]
         private partial struct EffectFromDatabaseJob : IJobEntity
@@ -53,14 +53,14 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
                 return;
-            Dependency = new EffectFromDatabaseJob
+            state.Dependency = new EffectFromDatabaseJob
             {
                 Db = db
-            }.Schedule(Dependency);
+            }.Schedule(state.Dependency);
         }
     }
 }

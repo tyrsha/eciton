@@ -8,7 +8,7 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(AbilityActivationGateSystem))]
-    public partial class AbilityInputSystem : SystemBase
+    public partial struct AbilityInputSystem : ISystem
     {
         [BurstCompile]
         private partial struct AbilityInputJob : IJobEntity
@@ -47,9 +47,9 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            Dependency = new AbilityInputJob().ScheduleParallel(Dependency);
+            state.Dependency = new AbilityInputJob().ScheduleParallel(state.Dependency);
         }
     }
 }

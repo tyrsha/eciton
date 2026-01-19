@@ -10,7 +10,7 @@ namespace Tyrsha.Eciton
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(AbilityGrantSystem))]
     [UpdateBefore(typeof(AbilityInputSystem))]
-    public partial class AbilityInputAutoBindSystem : SystemBase
+    public partial struct AbilityInputAutoBindSystem : ISystem
     {
         [BurstCompile]
         private partial struct AbilityInputAutoBindJob : IJobEntity
@@ -52,9 +52,9 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            Dependency = new AbilityInputAutoBindJob().ScheduleParallel(Dependency);
+            state.Dependency = new AbilityInputAutoBindJob().ScheduleParallel(state.Dependency);
         }
     }
 }

@@ -8,7 +8,7 @@ namespace Tyrsha.Eciton
     /// 실제 Ability 실행 로직은 이후 AbilitySystem 확장으로 구현.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public partial class AbilityRequestSystem : SystemBase
+    public partial struct AbilityRequestSystem : ISystem
     {
         [BurstCompile]
         private partial struct AbilityRequestConsumeJob : IJobEntity
@@ -29,9 +29,9 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            Dependency = new AbilityRequestConsumeJob().Schedule(Dependency);
+            state.Dependency = new AbilityRequestConsumeJob().Schedule(state.Dependency);
         }
     }
 }

@@ -8,7 +8,7 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(AttributeModifierSystem))]
-    public partial class AttributeAggregatorSystem : SystemBase
+    public partial struct AttributeAggregatorSystem : ISystem
     {
         [BurstCompile]
         private partial struct AttributeAggregatorJob : IJobEntity
@@ -65,9 +65,9 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            Dependency = new AttributeAggregatorJob().ScheduleParallel(Dependency);
+            state.Dependency = new AttributeAggregatorJob().ScheduleParallel(state.Dependency);
         }
     }
 }
