@@ -9,7 +9,7 @@ namespace Tyrsha.Eciton
     /// 실제 스택/태그/면역/예외 규칙 등은 이후 확장.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public partial class EffectRequestSystem : SystemBase
+    public partial struct EffectRequestSystem : ISystem
     {
         private int _nextHandle;
 
@@ -219,13 +219,12 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnCreate()
+        public void OnCreate(ref SystemState state)
         {
-            base.OnCreate();
             _nextHandle = 1;
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
                 return;
@@ -233,13 +232,13 @@ namespace Tyrsha.Eciton
             using var nextHandleRef = new NativeReference<int>(Allocator.TempJob);
             nextHandleRef.Value = _nextHandle;
 
-            Dependency = new EffectRequestJob
+            state.Dependency = new EffectRequestJob
             {
                 Db = db,
                 NextHandle = nextHandleRef
-            }.Schedule(Dependency);
+            }.Schedule(state.Dependency);
 
-            Dependency.Complete();
+            state.Dependency.Complete();
             _nextHandle = nextHandleRef.Value;
         }
     }

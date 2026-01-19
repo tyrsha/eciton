@@ -9,7 +9,7 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(AbilityActivationGateSystem))]
-    public partial class AbilityGrantSystem : SystemBase
+    public partial struct AbilityGrantSystem : ISystem
     {
         private int _nextHandle;
 
@@ -46,13 +46,12 @@ namespace Tyrsha.Eciton
             }
         }
 
-        protected override void OnCreate()
+        public void OnCreate(ref SystemState state)
         {
-            base.OnCreate();
             _nextHandle = 1;
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
                 return;
@@ -60,13 +59,13 @@ namespace Tyrsha.Eciton
             using var nextHandleRef = new NativeReference<int>(Allocator.TempJob);
             nextHandleRef.Value = _nextHandle;
 
-            Dependency = new AbilityGrantJob
+            state.Dependency = new AbilityGrantJob
             {
                 Db = db,
                 NextHandle = nextHandleRef
-            }.Schedule(Dependency);
+            }.Schedule(state.Dependency);
 
-            Dependency.Complete();
+            state.Dependency.Complete();
             _nextHandle = nextHandleRef.Value;
         }
     }
