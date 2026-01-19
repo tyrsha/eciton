@@ -1,22 +1,32 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public class EffectSystem : SystemBase
+    public partial class EffectSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct EffectJob : IJobEntity
         {
-            float dt = Time.DeltaTime;
-            
-            Entities.ForEach((ref EffectBase effect, ref AttributeData attribute) =>
+            public float Dt;
+
+            public void Execute(ref EffectBase effect, ref AttributeData attribute)
             {
                 // 효과 적용 로직 (예: Attribute 값 변경)
                 if (!effect.IsPermanent)
                 {
-                    effect.Duration -= dt;
+                    effect.Duration -= Dt;
                 }
-            }).ScheduleParallel();
+            }
+        }
+
+        protected override void OnUpdate()
+        {
+            Dependency = new EffectJob
+            {
+                Dt = SystemAPI.Time.DeltaTime
+            }.ScheduleParallel(Dependency);
         }
     }
 }

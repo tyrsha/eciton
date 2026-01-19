@@ -1,16 +1,23 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public class AttributeSystem : SystemBase
+    public partial class AttributeSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct AttributeJob : IJobEntity
         {
-            Entities.ForEach((ref AttributeData attributes) =>
+            public void Execute(ref AttributeData attributes)
             {
                 // 속성 업데이트 로직 (예: 체력 회복 등)
-            }).ScheduleParallel();
+            }
+        }
+
+        protected override void OnUpdate()
+        {
+            Dependency = new AttributeJob().ScheduleParallel(Dependency);
         }
     }
 }

@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -9,22 +10,21 @@ namespace Tyrsha.Eciton
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(FireballAbilitySystem))]
     [UpdateBefore(typeof(CommonAbilitySystems))]
-    public class AbilityActivationGateSystem : SystemBase
+    public partial class AbilityActivationGateSystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct AbilityActivationGateJob : IJobEntity
         {
-            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
-                return;
+            public AbilityEffectDatabase Db;
+            public float Dt;
 
-            float dt = Time.DeltaTime;
-
-            Entities.ForEach((
+            public void Execute(
                 Entity e,
                 ref AttributeData attributes,
                 in DynamicBuffer<GameplayTagElement> tags,
                 DynamicBuffer<GrantedAbility> granted,
                 DynamicBuffer<TryActivateAbilityRequest> tryActivate,
-                DynamicBuffer<ApplyEffectByIdRequest> applyEffectById) =>
+                DynamicBuffer<ApplyEffectByIdRequest> applyEffectById)
             {
                 // 쿨다운 감소
                 for (int g = 0; g < granted.Length; g++)
@@ -32,7 +32,7 @@ namespace Tyrsha.Eciton
                     var ga = granted[g];
                     if (ga.CooldownRemaining > 0f)
                     {
-                        ga.CooldownRemaining -= dt;
+                        ga.CooldownRemaining -= Dt;
                         if (ga.CooldownRemaining < 0f) ga.CooldownRemaining = 0f;
                         granted[g] = ga;
                     }
@@ -60,7 +60,7 @@ namespace Tyrsha.Eciton
                     }
 
                     var ability = granted[idx];
-                    if (!AbilityEffectDatabaseLookup.TryGetAbility(db, ability.AbilityId, out var def))
+                    if (!AbilityEffectDatabaseLookup.TryGetAbility(Db, ability.AbilityId, out var def))
                     {
                         tryActivate.RemoveAt(i);
                         continue;
@@ -120,17 +120,29 @@ namespace Tyrsha.Eciton
                         });
                     }
                 }
-            }).ScheduleParallel();
+            }
+
+            private static bool HasTag(in DynamicBuffer<GameplayTagElement> tags, int tagValue)
+            {
+                for (int i = 0; i < tags.Length; i++)
+                {
+                    if (tags[i].Tag.Value == tagValue)
+                        return true;
+                }
+                return false;
+            }
         }
 
-        private static bool HasTag(DynamicBuffer<GameplayTagElement> tags, int tagValue)
+        protected override void OnUpdate()
         {
-            for (int i = 0; i < tags.Length; i++)
+            if (!SystemAPI.TryGetSingleton<AbilityEffectDatabase>(out var db))
+                return;
+
+            Dependency = new AbilityActivationGateJob
             {
-                if (tags[i].Tag.Value == tagValue)
-                    return true;
-            }
-            return false;
+                Db = db,
+                Dt = SystemAPI.Time.DeltaTime
+            }.ScheduleParallel(Dependency);
         }
     }
 }

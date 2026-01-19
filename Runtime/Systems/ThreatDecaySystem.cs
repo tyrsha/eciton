@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Entities;
 
 namespace Tyrsha.Eciton
@@ -5,14 +6,15 @@ namespace Tyrsha.Eciton
     /// <summary>Threat 테이블을 시간에 따라 감쇠시키는 스텁.</summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(ThreatSystem))]
-    public class ThreatDecaySystem : SystemBase
+    public partial class ThreatDecaySystem : SystemBase
     {
-        protected override void OnUpdate()
+        [BurstCompile]
+        private partial struct ThreatDecayJob : IJobEntity
         {
-            float dt = Time.DeltaTime;
-            double now = SystemAPI.Time.ElapsedTime;
+            public float Dt;
+            public double Now;
 
-            Entities.ForEach((in PerceptionSensor sensor, DynamicBuffer<ThreatEntry> threat) =>
+            public void Execute(in PerceptionSensor sensor, DynamicBuffer<ThreatEntry> threat)
             {
                 float decay = sensor.ThreatDecayPerSecond;
                 float mem = sensor.MemorySeconds;
@@ -23,12 +25,12 @@ namespace Tyrsha.Eciton
 
                     if (decay > 0f && e.Threat > 0f)
                     {
-                        e.Threat -= decay * dt;
+                        e.Threat -= decay * Dt;
                         if (e.Threat < 0f) e.Threat = 0f;
                     }
 
                     // 메모리 만료면 제거(Threat가 0이고 오래 못 봤으면 제거)
-                    if (mem > 0f && e.LastSeenTime > 0 && (now - e.LastSeenTime) > mem && e.Threat <= 0f)
+                    if (mem > 0f && e.LastSeenTime > 0 && (Now - e.LastSeenTime) > mem && e.Threat <= 0f)
                     {
                         threat.RemoveAt(i);
                         continue;
@@ -36,7 +38,16 @@ namespace Tyrsha.Eciton
 
                     threat[i] = e;
                 }
-            }).ScheduleParallel();
+            }
+        }
+
+        protected override void OnUpdate()
+        {
+            Dependency = new ThreatDecayJob
+            {
+                Dt = SystemAPI.Time.DeltaTime,
+                Now = SystemAPI.Time.ElapsedTime
+            }.ScheduleParallel(Dependency);
         }
     }
 }
