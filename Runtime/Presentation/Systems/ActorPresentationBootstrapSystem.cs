@@ -8,14 +8,14 @@ namespace Tyrsha.Eciton.Presentation
     /// AbilitySystemComponent(ASC)을 가진 엔티티에 Presentation 상태 컴포넌트를 부착하는 스텁.
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public partial class ActorPresentationBootstrapSystem : SystemBase
+    public partial struct ActorPresentationBootstrapSystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            var em = EntityManager;
+            var em = state.EntityManager;
 
             // 스텁: ASC가 있고 PresentationState가 없는 엔티티에 추가
-            using var query = GetEntityQuery(new EntityQueryDesc
+            var query = state.GetEntityQuery(new EntityQueryDesc
             {
                 All = new[] { ComponentType.ReadOnly<AbilitySystemComponent>() },
                 None = new[] { ComponentType.ReadOnly<ActorPresentationState>() }
