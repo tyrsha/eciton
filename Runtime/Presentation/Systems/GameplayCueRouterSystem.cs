@@ -10,13 +10,13 @@ namespace Tyrsha.Eciton.Presentation
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(GameplayTagSystem))]
-    public partial class GameplayCueRouterSystem : SystemBase
+    public partial struct GameplayCueRouterSystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            var em = EntityManager;
+            var em = state.EntityManager;
 
-            using var query = GetEntityQuery(
+            var query = state.GetEntityQuery(
                 ComponentType.ReadOnly<AbilitySystemComponent>(),
                 ComponentType.ReadOnly<AddGameplayTagRequest>(),
                 ComponentType.ReadOnly<RemoveGameplayTagRequest>());

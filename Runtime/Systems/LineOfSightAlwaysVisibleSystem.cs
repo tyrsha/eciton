@@ -11,13 +11,13 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(PerceptionSystem))]
-    public class LineOfSightAlwaysVisibleSystem : SystemBase
+    public partial struct LineOfSightAlwaysVisibleSystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
-            var em = EntityManager;
+            var em = state.EntityManager;
 
-            using var targetQuery = em.CreateEntityQuery(
+            var targetQuery = state.GetEntityQuery(
                 ComponentType.ReadOnly<Targetable>(),
                 ComponentType.ReadOnly<Faction>(),
                 ComponentType.ReadOnly<LocalTransform>());
@@ -27,7 +27,10 @@ namespace Tyrsha.Eciton
             var targetTransforms = targetQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp);
 
             // 그 다음 버퍼 채우기 (NativeArray를 람다 밖에서 처리)
-            using var selfQuery = GetEntityQuery(typeof(Faction), typeof(PerceptionSensor), typeof(LocalTransform));
+            var selfQuery = state.GetEntityQuery(
+                ComponentType.ReadOnly<Faction>(),
+                ComponentType.ReadOnly<PerceptionSensor>(),
+                ComponentType.ReadOnly<LocalTransform>());
             var selfEntities = selfQuery.ToEntityArray(Allocator.Temp);
             var selfFactions = selfQuery.ToComponentDataArray<Faction>(Allocator.Temp);
             var selfSensors = selfQuery.ToComponentDataArray<PerceptionSensor>(Allocator.Temp);

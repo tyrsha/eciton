@@ -6,14 +6,14 @@ namespace Tyrsha.Eciton
     /// <summary>StunBolt 투사체 비행/충돌(시간 기반 스텁) 및 스턴 효과 적용.</summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(EffectFromDatabaseSystem))]
-    public class StunBoltProjectileSystem : SystemBase
+    public partial struct StunBoltProjectileSystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             float dt = SystemAPI.Time.DeltaTime;
-            var em = EntityManager;
+            var em = state.EntityManager;
 
-            using var query = GetEntityQuery(ComponentType.ReadWrite<StunBoltProjectile>());
+            var query = state.GetEntityQuery(ComponentType.ReadWrite<StunBoltProjectile>());
             using var entities = query.ToEntityArray(Allocator.Temp);
             using var projectiles = query.ToComponentDataArray<StunBoltProjectile>(Allocator.Temp);
 

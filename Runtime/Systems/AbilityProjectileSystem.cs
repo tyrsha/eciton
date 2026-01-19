@@ -8,14 +8,14 @@ namespace Tyrsha.Eciton
     /// </summary>
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateBefore(typeof(EffectFromDatabaseSystem))]
-    public class AbilityProjectileSystem : SystemBase
+    public partial struct AbilityProjectileSystem : ISystem
     {
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             float dt = SystemAPI.Time.DeltaTime;
-            var em = EntityManager;
+            var em = state.EntityManager;
 
-            using var query = GetEntityQuery(ComponentType.ReadWrite<AbilityProjectile>());
+            var query = state.GetEntityQuery(ComponentType.ReadWrite<AbilityProjectile>());
             using var entities = query.ToEntityArray(Allocator.Temp);
             using var projectiles = query.ToComponentDataArray<AbilityProjectile>(Allocator.Temp);
 
