@@ -22,15 +22,21 @@ namespace Tyrsha.Eciton.Presentation
                 ComponentType.ReadOnly<RemoveGameplayTagRequest>());
             using var entities = query.ToEntityArray(AllocatorManager.Temp);
 
+            // 먼저 필요한 버퍼를 모두 추가 (구조적 변경)
+            for (int i = 0; i < entities.Length; i++)
+            {
+                var e = entities[i];
+                if (!em.HasBuffer<GameplayCueEvent>(e))
+                    em.AddBuffer<GameplayCueEvent>(e);
+            }
+
+            // 구조적 변경 후 버퍼 읽기
             for (int i = 0; i < entities.Length; i++)
             {
                 var e = entities[i];
                 _ = em.GetComponentData<AbilitySystemComponent>(e);
                 var addReq = em.GetBuffer<AddGameplayTagRequest>(e);
                 var removeReq = em.GetBuffer<RemoveGameplayTagRequest>(e);
-
-                if (!em.HasBuffer<GameplayCueEvent>(e))
-                    em.AddBuffer<GameplayCueEvent>(e);
                 var cues = em.GetBuffer<GameplayCueEvent>(e);
 
                 for (int j = 0; j < addReq.Length; j++)
